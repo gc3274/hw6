@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   canPublish,
+  CREATE_ERRORS,
+  createRefusal,
+  criticChoices,
   checkViolationField,
   deleteWarning,
   describeGenerateError,
   eligibleCritic,
   isJpeg,
+  parseCreateForm,
+  roastInsert,
   validateRoastEdit,
   voiceOf,
 } from "@/lib/media";
@@ -249,5 +254,150 @@ describe("deleteWarning", () => {
 
   it("leaves votes out when there are none", () => {
     expect(deleteWarning(0)).toBe("It has no votes. This can’t be undone.");
+  });
+});
+
+describe("parseCreateForm", () => {
+  const IMAGE = "6f1c2a4e-9b3d-4c5e-8f7a-1b2c3d4e5f60";
+
+  it("reads a post id and a critic id", () => {
+    expect(parseCreateForm(form({ imageId: IMAGE, criticId: "1" }))).toEqual({
+      ok: true,
+      imageId: IMAGE,
+      criticId: 1,
+    });
+  });
+
+  it("lowercases the post id", () => {
+    const result = parseCreateForm(form({ imageId: IMAGE.toUpperCase(), criticId: "7" }));
+    expect(result).toEqual({ ok: true, imageId: IMAGE, criticId: 7 });
+  });
+
+  it("refuses a missing or malformed post id", () => {
+    for (const imageId of ["", "abc", `${IMAGE}x`, "1"]) {
+      expect(parseCreateForm(form({ imageId, criticId: "1" })), imageId).toEqual({
+        ok: false,
+        error: CREATE_ERRORS.gone,
+      });
+    }
+    expect(parseCreateForm(form({ criticId: "1" }))).toEqual({ ok: false, error: CREATE_ERRORS.gone });
+  });
+
+  it("refuses a critic id that isn't a whole number from 1", () => {
+    for (const criticId of ["", "0", "-1", "1.5", "abc", " 1", "1e2", "999999"]) {
+      expect(parseCreateForm(form({ imageId: IMAGE, criticId })), criticId).toEqual({
+        ok: false,
+        error: CREATE_ERRORS.noCritic,
+      });
+    }
+    expect(parseCreateForm(form({ imageId: IMAGE }))).toEqual({ ok: false, error: CREATE_ERRORS.noCritic });
+  });
+});
+
+describe("createRefusal", () => {
+  const chef = { topic: "food" };
+  const general = { topic: null };
+
+  it("allows the topic expert and the general panel on a roast post", () => {
+    expect(createRefusal({ topic: "food" }, chef)).toBeNull();
+    expect(createRefusal({ topic: "food" }, general)).toBeNull();
+    expect(createRefusal({ topic: "anything" }, general)).toBeNull();
+  });
+
+  it("refuses a post that no longer exists", () => {
+    expect(createRefusal(null, chef)).toBe(CREATE_ERRORS.gone);
+    expect(createRefusal(null, null)).toBe(CREATE_ERRORS.gone);
+  });
+
+  it("refuses legacy caption posts, whatever the critic", () => {
+    expect(createRefusal({ topic: null }, general)).toBe(CREATE_ERRORS.legacy);
+    expect(createRefusal({ topic: null }, chef)).toBe(CREATE_ERRORS.legacy);
+    expect(createRefusal({ topic: "memes" }, general)).toBe(CREATE_ERRORS.legacy);
+  });
+
+  it("refuses a critic who isn't on the post's panel, or doesn't exist", () => {
+    expect(createRefusal({ topic: "art" }, chef)).toBe(CREATE_ERRORS.offPanel);
+    expect(createRefusal({ topic: "anything" }, chef)).toBe(CREATE_ERRORS.offPanel);
+    expect(createRefusal({ topic: "food" }, null)).toBe(CREATE_ERRORS.offPanel);
+  });
+});
+
+describe("roastInsert", () => {
+  const image = { id: "6f1c2a4e-9b3d-4c5e-8f7a-1b2c3d4e5f60", user_id: "0d9e8f7a-6b5c-4d3e-8f2a-1b0c9d8e7f6a" };
+  const draft = { criticId: 1, content: "Raw in the middle, burnt on the edges.", tip: "Lower the heat.", rating: 3 };
+  const generated = { prompt: "You are the judging panel…\n\nRoast this.", model: "gemini-3.5-flash" };
+
+  it("files the roast under the post's owner, private, in the critic's voice", () => {
+    expect(roastInsert(image, draft, generated)).toEqual({
+      image_id: image.id,
+      user_id: image.user_id,
+      critic_id: 1,
+      humor_flavor_id: null,
+      content: draft.content,
+      tip: draft.tip,
+      rating: 3,
+      prompt: generated.prompt,
+      model: generated.model,
+      is_public: false,
+    });
+  });
+
+  it("keeps a missing tip and score as null", () => {
+    const row = roastInsert(image, { ...draft, tip: null, rating: null }, generated);
+    expect(row.tip).toBeNull();
+    expect(row.rating).toBeNull();
+    expect(row.is_public).toBe(false);
+  });
+
+  it("never sets posted_at, votes or anything else", () => {
+    expect(Object.keys(roastInsert(image, draft, generated)).sort()).toEqual([
+      "content",
+      "critic_id",
+      "humor_flavor_id",
+      "image_id",
+      "is_public",
+      "model",
+      "prompt",
+      "rating",
+      "tip",
+      "user_id",
+    ]);
+  });
+});
+
+describe("criticChoices", () => {
+  const panel = [{ id: 1 }, { id: 5 }, { id: 6 }, { id: 7 }];
+
+  it("counts each critic's roasts on the post and preselects the first with none", () => {
+    const { choices, preselect } = criticChoices(panel, [1, 5, 5, null]);
+    expect(choices.map((c) => [c.id, c.existing])).toEqual([
+      [1, 1],
+      [5, 2],
+      [6, 0],
+      [7, 0],
+    ]);
+    expect(preselect).toBe(6);
+  });
+
+  it("preselects the expert on a post with no roasts", () => {
+    expect(criticChoices(panel, []).preselect).toBe(1);
+  });
+
+  it("preselects nobody when every critic has a roast", () => {
+    expect(criticChoices(panel, [7, 6, 5, 1]).preselect).toBeNull();
+  });
+
+  it("ignores roasts by critics who aren't on the panel", () => {
+    const { choices } = criticChoices(panel, [2, 3]);
+    expect(choices.every((c) => c.existing === 0)).toBe(true);
+  });
+
+  it("handles an empty panel", () => {
+    expect(criticChoices([], [1])).toEqual({ choices: [], preselect: null });
+  });
+
+  it("keeps the critics' own fields", () => {
+    const { choices } = criticChoices([{ id: 4, name: "Margaux" }], []);
+    expect(choices).toEqual([{ id: 4, name: "Margaux", existing: 0 }]);
   });
 });

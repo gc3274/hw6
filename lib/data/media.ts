@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { IMAGE_BUCKET } from "@/lib/captions";
 import { rangeFor, type MediaQuery } from "@/lib/params";
+import { parseTopic, type Topic } from "@/lib/roasts";
 import { adminDb } from "@/lib/supabase/admin";
 import { fullName } from "@/lib/users";
 
@@ -269,5 +270,150 @@ export async function getMedia(id: string): Promise<MediaDetail | null> {
       rating: s.rating,
       isPublic: s.is_public,
     })),
+  };
+}
+
+// The create flow (/media/new). context is left out on purpose: the uploader's
+// note is shown only on a roast's detail page, and createRoast reads it itself.
+
+type PostRow = {
+  id: string;
+  user_id: string;
+  image_path: string;
+  topic: string | null;
+  created_at: string;
+  captions: { critic_id: number | null; is_public: boolean }[];
+};
+
+export type RoastPost = {
+  id: string;
+  imageUrl: string;
+  topic: string | null;
+  createdAt: string;
+  roasts: number;
+  publicRoasts: number;
+  owner: { id: string; name: string | null };
+};
+
+// Roast posts only (a topic set), newest first, for the "pick a post" step
+export async function listRoastPosts(page: number): Promise<{ rows: RoastPost[]; total: number }> {
+  const db = await adminDb();
+  const [from, to] = rangeFor(page);
+  const { data, error, count } = await db
+    .from("images")
+    .select("id, user_id, image_path, topic, created_at, captions(critic_id, is_public)", { count: "exact" })
+    .not("topic", "is", null)
+    .order("created_at", { ascending: false })
+    .order("id")
+    .range(from, to)
+    .overrideTypes<PostRow[], { merge: false }>();
+  if (error) throw fail("Roast posts", error);
+
+  const rows = data ?? [];
+  const names = await ownerNames(db, [...new Set(rows.map((r) => r.user_id))]);
+  const bucket = db.storage.from(IMAGE_BUCKET);
+
+  return {
+    rows: rows.map((r) => {
+      const roasts = r.captions.filter((c) => c.critic_id !== null);
+      return {
+        id: r.id,
+        imageUrl: bucket.getPublicUrl(r.image_path).data.publicUrl,
+        topic: r.topic,
+        createdAt: r.created_at,
+        roasts: roasts.length,
+        publicRoasts: roasts.filter((c) => c.is_public).length,
+        owner: { id: r.user_id, name: names.get(r.user_id) ?? null },
+      };
+    }),
+    total: count ?? 0,
+  };
+}
+
+export type PanelCritic = CriticOption & { description: string };
+
+type PanelRoastRow = {
+  id: string;
+  critic_id: number;
+  content: string;
+  rating: number | null;
+  is_public: boolean;
+  critics: Voice | null;
+};
+
+export type PanelRoast = {
+  id: string;
+  criticId: number;
+  critic: Voice | null;
+  content: string;
+  rating: number | null;
+  isPublic: boolean;
+};
+
+export type PostForCreate = {
+  id: string;
+  imageUrl: string;
+  // null on a legacy caption post, which can't get roasts
+  topic: Topic | null;
+  createdAt: string;
+  owner: { id: string; name: string | null };
+  // Its roasts so far, oldest first
+  roasts: PanelRoast[];
+  // The critics who may roast it, in panel order; empty on a legacy post
+  panel: PanelCritic[];
+};
+
+// null when no post has this id, so the page can 404
+export async function getPostForCreate(imageId: string): Promise<PostForCreate | null> {
+  const db = await adminDb();
+
+  const { data: image, error } = await db
+    .from("images")
+    .select("id, user_id, image_path, topic, created_at")
+    .eq("id", imageId)
+    .maybeSingle<{ id: string; user_id: string; image_path: string; topic: string | null; created_at: string }>();
+  if (error) throw fail("Post", error);
+  if (!image) return null;
+
+  // parseTopic first, so only a known slug reaches the or() filter
+  const topic = parseTopic(image.topic);
+
+  const [roasts, panel, names] = await Promise.all([
+    db
+      .from("captions")
+      .select("id, critic_id, content, rating, is_public, critics(name, emoji)")
+      .eq("image_id", image.id)
+      .not("critic_id", "is", null)
+      .order("created_at")
+      .order("id")
+      .overrideTypes<PanelRoastRow[], { merge: false }>(),
+    topic === null
+      ? Promise.resolve({ data: [] as PanelCritic[], error: null })
+      : db
+          .from("critics")
+          .select("id, slug, name, emoji, topic, description")
+          .or(`topic.is.null,topic.eq.${topic}`)
+          .order("sort_order")
+          .overrideTypes<PanelCritic[], { merge: false }>(),
+    ownerNames(db, [image.user_id]),
+  ]);
+  if (roasts.error) throw fail("Roasts on the post", roasts.error);
+  if (panel.error) throw fail("Critic panel", panel.error);
+
+  return {
+    id: image.id,
+    imageUrl: db.storage.from(IMAGE_BUCKET).getPublicUrl(image.image_path).data.publicUrl,
+    topic,
+    createdAt: image.created_at,
+    owner: { id: image.user_id, name: names.get(image.user_id) ?? null },
+    roasts: (roasts.data ?? []).map((r) => ({
+      id: r.id,
+      criticId: r.critic_id,
+      critic: r.critics,
+      content: r.content,
+      rating: r.rating,
+      isPublic: r.is_public,
+    })),
+    panel: panel.data ?? [],
   };
 }

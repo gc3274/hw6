@@ -1,8 +1,8 @@
 // Rules for admin edits to roasts (captions rows). Pure, so they run in tests;
 // the actions in app/(admin)/media/actions.ts apply them before any write.
-import { CAPTION_MAX } from "@/lib/captions";
+import { CAPTION_MAX, isUuid } from "@/lib/captions";
 import { codePoints } from "@/lib/format";
-import { RATING_MAX, TIP_MAX } from "@/lib/roasts";
+import { parseTopic, RATING_MAX, TIP_MAX, type RoastDraft } from "@/lib/roasts";
 
 export type Voice = "roast" | "legacy" | "invalid";
 
@@ -126,3 +126,90 @@ export function describeGenerateError(reason: GenerateFailure): string {
 
 // JPEG files always start with FF D8 FF (same check as the main app's upload action)
 export const isJpeg = (bytes: Uint8Array) => bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+
+// What createRoast hands back to the create form. On success it redirects instead.
+export type CreateState = { error: string | null };
+
+export const CREATE_ERRORS = {
+  gone: "That post no longer exists.",
+  noCritic: "Pick a critic.",
+  legacy: "Legacy caption posts can't get roasts.",
+  offPanel: "That critic isn't on this post's panel.",
+} as const;
+
+// critics.id is a smallint, so at most 5 digits
+const CRITIC_ID_RE = /^[1-9]\d{0,4}$/;
+
+export function parseCreateForm(
+  fd: FormData,
+): { ok: true; imageId: string; criticId: number } | { ok: false; error: string } {
+  const imageId = fd.get("imageId");
+  if (!isUuid(imageId)) return { ok: false, error: CREATE_ERRORS.gone };
+  const criticId = fd.get("criticId");
+  if (typeof criticId !== "string" || !CRITIC_ID_RE.test(criticId)) {
+    return { ok: false, error: CREATE_ERRORS.noCritic };
+  }
+  return { ok: true, imageId: imageId.toLowerCase(), criticId: Number(criticId) };
+}
+
+// Why this critic can't roast this post, or null when it can. The form only offers
+// the post's panel, so these catch a stale page or a hand-made request.
+export function createRefusal(
+  image: { topic: string | null } | null,
+  critic: { topic: string | null } | null,
+): string | null {
+  if (!image) return CREATE_ERRORS.gone;
+  if (parseTopic(image.topic) === null) return CREATE_ERRORS.legacy;
+  if (!critic || !eligibleCritic(critic.topic, image.topic)) return CREATE_ERRORS.offPanel;
+  return null;
+}
+
+export type RoastInsert = {
+  image_id: string;
+  user_id: string;
+  critic_id: number;
+  humor_flavor_id: null;
+  content: string;
+  tip: string | null;
+  rating: number | null;
+  prompt: string;
+  model: string;
+  is_public: false;
+};
+
+// The row createRoast inserts. It belongs to the post's owner (user_id's default,
+// auth.uid(), is null under the service role) so it shows in their review screen,
+// and it starts private: a public roast makes the photo public, and posted_at is
+// only stamped when a roast is published by an update.
+export function roastInsert(
+  image: { id: string; user_id: string },
+  draft: RoastDraft,
+  generated: { prompt: string; model: string },
+): RoastInsert {
+  return {
+    image_id: image.id,
+    user_id: image.user_id,
+    critic_id: draft.criticId,
+    humor_flavor_id: null,
+    content: draft.content,
+    tip: draft.tip,
+    rating: draft.rating,
+    prompt: generated.prompt,
+    model: generated.model,
+    is_public: false,
+  };
+}
+
+// The create form's critic radios: how many roasts each critic already has on the
+// post, and which one starts selected (the first in panel order with none yet).
+// A second roast by the same critic is allowed; the form just says so.
+export function criticChoices<C extends { id: number }>(
+  critics: C[],
+  roastCriticIds: (number | null)[],
+): { choices: (C & { existing: number })[]; preselect: number | null } {
+  const choices = critics.map((c) => ({
+    ...c,
+    existing: roastCriticIds.filter((id) => id === c.id).length,
+  }));
+  return { choices, preselect: choices.find((c) => c.existing === 0)?.id ?? null };
+}

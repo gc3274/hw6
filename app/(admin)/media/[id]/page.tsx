@@ -5,7 +5,7 @@ import { notFound, unstable_rethrow } from "next/navigation";
 import type { ReactNode } from "react";
 import Badge from "@/components/Badge";
 import RatingPill from "@/components/RatingPill";
-import { card, errorBox, textLink } from "@/components/ui";
+import { card, errorBox, noticeBox, textLink } from "@/components/ui";
 import { isUuid } from "@/lib/captions";
 import { getMedia, type MediaDetail, type MediaSibling } from "@/lib/data/media";
 import { requireSuperadmin } from "@/lib/dal";
@@ -64,8 +64,11 @@ export default async function MediaDetailPage({ params, searchParams }: PageProp
   }
   if (!media) notFound();
 
+  const sp = await searchParams;
   // Set by deleteRoast when the delete itself failed
-  const deleteFailed = first((await searchParams).error) === "delete";
+  const deleteFailed = first(sp.error) === "delete";
+  // Set by createRoast after it saves a new roast
+  const created = !deleteFailed && first(sp.created) === "1";
   const legacy = media.critic === null;
   const topic = topicInfo(media.image.topic);
   const owner = (
@@ -107,6 +110,12 @@ export default async function MediaDetailPage({ params, searchParams }: PageProp
       {deleteFailed && (
         <p role="alert" className={`${errorBox} mt-6`}>
           Couldn’t delete: the database didn’t answer. Try again.
+        </p>
+      )}
+      {created && (
+        <p role="status" className={`${noticeBox} mt-6`}>
+          Roast generated and saved private. The owner sees it in their review screen and can post
+          it from there.
         </p>
       )}
 
@@ -266,9 +275,16 @@ function Siblings({ media }: { media: MediaDetail }) {
   const legacy = media.critic === null;
   return (
     <section aria-labelledby="siblings-heading">
-      <h2 id="siblings-heading" className="text-base font-semibold tracking-tight">
-        {legacy ? "Other captions on this post" : "Rest of the panel"}
-      </h2>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id="siblings-heading" className="text-base font-semibold tracking-tight">
+          {legacy ? "Other captions on this post" : "Rest of the panel"}
+        </h2>
+        {!legacy && (
+          <Link href={hrefWith("/media/new", {}, { image: media.image.id })} className={`text-sm ${textLink}`}>
+            Add a critic’s roast
+          </Link>
+        )}
+      </div>
       {media.siblings.length === 0 ? (
         <p className="mt-1 text-sm text-muted">
           {legacy ? "None." : "This is the only roast on the post."}

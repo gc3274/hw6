@@ -7,7 +7,7 @@ import FilterBar from "@/components/FilterBar";
 import Pagination from "@/components/Pagination";
 import RatingPill from "@/components/RatingPill";
 import Thumb from "@/components/Thumb";
-import { errorBox, input, label, noticeBox, textLink } from "@/components/ui";
+import { button, errorBox, input, label, noticeBox, textLink } from "@/components/ui";
 import { isUuid } from "@/lib/captions";
 import { listMedia, type CriticOption, type MediaRow } from "@/lib/data/media";
 import { requireSuperadmin } from "@/lib/dal";
@@ -59,7 +59,12 @@ export default async function MediaPage({ searchParams }: PageProps<"/media">) {
 
   return (
     <>
-      <h1 className="font-display text-3xl font-bold tracking-tight">Roasts</h1>
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <h1 className="font-display text-3xl font-bold tracking-tight">Roasts</h1>
+        <Link href="/media/new" className={button("secondary")}>
+          Generate a roast
+        </Link>
+      </div>
       <p className="mt-2 max-w-prose text-muted">
         AI-generated roasts written by the critic panel. Open one to edit its words, score or
         visibility, or to delete it.
@@ -289,7 +294,7 @@ function NoRows({ query, total }: { query: MediaQuery; total: number }) {
     return <EmptyState title="No legacy captions.">Captions from before roast mode appear here.</EmptyState>;
   }
   return (
-    <EmptyState title="No roasts yet.">
+    <EmptyState title="No roasts yet." action={{ href: "/media/new", label: "Generate a roast" }}>
       Roasts appear here after someone uploads a photo in the app.
     </EmptyState>
   );
