@@ -9,11 +9,14 @@ type FilterBarProps = {
   children: ReactNode;
   // Shown only when a filter is set
   showClear?: boolean;
+  // Where "Clear filters" goes, when the bare route isn't the unfiltered list
+  // (e.g. /votes?view=ratings). Defaults to action.
+  clearHref?: string;
 };
 
 // A plain GET form, so filtering works without JavaScript and every result is a
 // shareable URL. Submitting starts again at page 1 because no page field is sent.
-export default function FilterBar({ action, children, showClear = false }: FilterBarProps) {
+export default function FilterBar({ action, children, showClear = false, clearHref = action }: FilterBarProps) {
   return (
     <form
       method="get"
@@ -26,7 +29,7 @@ export default function FilterBar({ action, children, showClear = false }: Filte
           Apply filters
         </button>
         {showClear && (
-          <Link href={action} className={`text-sm ${textLink}`}>
+          <Link href={clearHref} className={`text-sm ${textLink}`}>
             Clear filters
           </Link>
         )}

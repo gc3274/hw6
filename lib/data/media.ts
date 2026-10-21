@@ -51,7 +51,8 @@ export type MediaRow = {
 
 const fail = (what: string, error: { message: string }) => new Error(`${what} failed: ${error.message}`);
 
-async function listCritics(db: SupabaseClient): Promise<CriticOption[]> {
+// Also used by lib/data/votes.ts for its critic filter
+export async function listCritics(db: SupabaseClient): Promise<CriticOption[]> {
   const { data, error } = await db
     .from("critics")
     .select("id, slug, name, emoji, topic")
@@ -62,8 +63,9 @@ async function listCritics(db: SupabaseClient): Promise<CriticOption[]> {
 }
 
 // Owner names for a page of rows. profiles can't be embedded from captions
-// (captions.user_id points at auth.users), so this is a second read.
-async function ownerNames(db: SupabaseClient, ids: string[]) {
+// (captions.user_id points at auth.users), so this is a second read. Also used
+// by lib/data/votes.ts for voter names, which have the same problem.
+export async function ownerNames(db: SupabaseClient, ids: string[]) {
   const names = new Map<string, string | null>();
   if (ids.length === 0) return names;
   const { data, error } = await db
