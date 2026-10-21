@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   canPublish,
+  checkViolationField,
+  deleteWarning,
   describeGenerateError,
   eligibleCritic,
   isJpeg,
@@ -212,5 +214,40 @@ describe("isJpeg", () => {
     expect(isJpeg(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toBe(false);
     expect(isJpeg(new Uint8Array([0xff, 0xd8]))).toBe(false);
     expect(isJpeg(new Uint8Array([]))).toBe(false);
+  });
+});
+
+describe("checkViolationField", () => {
+  const violation = (constraint: string) =>
+    `new row for relation "captions" violates check constraint "${constraint}"`;
+
+  it("maps each editable column's check to its field", () => {
+    expect(checkViolationField(violation("captions_content_len"))).toBe("content");
+    expect(checkViolationField(violation("captions_tip_len"))).toBe("tip");
+    expect(checkViolationField(violation("captions_rating_range"))).toBe("rating");
+  });
+
+  it("returns null for checks no form field can fix", () => {
+    expect(checkViolationField(violation("captions_one_voice"))).toBeNull();
+    expect(checkViolationField(violation("captions_upvotes_min"))).toBeNull();
+  });
+
+  it("returns null for other messages and a missing one", () => {
+    expect(checkViolationField("captions_content_len_extra")).toBeNull();
+    expect(checkViolationField("permission denied for table captions")).toBeNull();
+    expect(checkViolationField("")).toBeNull();
+    expect(checkViolationField(undefined)).toBeNull();
+  });
+});
+
+describe("deleteWarning", () => {
+  it("counts the votes that go with the roast", () => {
+    expect(deleteWarning(3)).toBe("Its 3 votes are deleted too. This can’t be undone.");
+    expect(deleteWarning(1)).toBe("Its 1 vote is deleted too. This can’t be undone.");
+    expect(deleteWarning(1200)).toBe("Its 1,200 votes are deleted too. This can’t be undone.");
+  });
+
+  it("leaves votes out when there are none", () => {
+    expect(deleteWarning(0)).toBe("It has no votes. This can’t be undone.");
   });
 });

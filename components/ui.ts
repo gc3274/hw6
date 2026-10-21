@@ -34,3 +34,5 @@ export const label = "text-sm font-medium text-ink";
 export const textLink = `rounded-sm font-medium text-accent underline-offset-4 hover:underline ${focusRing}`;
 
 export const errorBox = "rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger";
+
+export const noticeBox = "rounded-lg border border-accent/20 bg-accent/5 px-4 py-3 text-sm text-ink";
