@@ -1,5 +1,5 @@
-// Copied from gc3274/hw1@3eb3337 app/login/GoogleSignInButton.tsx; keep the sign-in
-// logic in sync (restyled as Google's light button for the admin theme)
+// Copied from gc3274/hw1@3eb3337 app/login/GoogleSignInButton.tsx; keep in sync
+// Only the sign-in logic is shared; restyled as Google's light button for the admin theme
 "use client";
 
 import { useEffect, useState } from "react";

@@ -5,6 +5,7 @@ import {
   dayLabel,
   durationLabel,
   fmt1,
+  nouns,
   nyDayKey,
   sentenceCount,
   shareLabel,
@@ -156,5 +157,18 @@ describe("durationLabel", () => {
     expect(durationLabel(90)).toBe("2 hours");
     expect(durationLabel(1430)).toBe("1 day");
     expect(durationLabel(3 * 24 * 60)).toBe("3 days");
+  });
+});
+
+describe("nouns", () => {
+  it("picks the singular only for exactly one", () => {
+    expect(nouns(0, "user")).toBe("0 users");
+    expect(nouns(1, "user")).toBe("1 user");
+    expect(nouns(2, "user")).toBe("2 users");
+  });
+
+  it("takes an irregular plural and groups thousands", () => {
+    expect(nouns(1, "legacy caption", "legacy captions")).toBe("1 legacy caption");
+    expect(nouns(2400, "roast or caption", "roasts and captions")).toBe("2,400 roasts and captions");
   });
 });

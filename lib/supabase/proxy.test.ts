@@ -357,7 +357,7 @@ describe("proxy.ts", () => {
   });
 
   it("uses the strict matcher", () => {
-    expect(config.matcher).toEqual(["/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg).*)"]);
+    expect(config.matcher).toEqual(["/((?!_next/static/|_next/image$|favicon\\.ico$|icon\\.svg$).*)"]);
   });
 
   it("runs on every page path, including image-looking suffixes, and skips only build assets", async () => {
@@ -380,6 +380,10 @@ describe("proxy.ts", () => {
       "/api/anything",
       "/favicon.png",
       "/logo.svg",
+      "/icon.svgx",
+      "/favicon.ico/x",
+      "/_next/staticx",
+      "/_next/imagex",
     ]) {
       expect(matches({ config, url }), url).toBe(true);
     }

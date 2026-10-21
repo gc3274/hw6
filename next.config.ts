@@ -7,6 +7,7 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 const nextConfig: NextConfig = {
   // Keep next dev from writing its own docs files into the repo
   agentRules: false,
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       {

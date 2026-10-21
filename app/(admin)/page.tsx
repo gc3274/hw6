@@ -14,7 +14,7 @@ import StatTile from "@/components/StatTile";
 import { card, errorBox } from "@/components/ui";
 import { loadStatsDataset, type StatsDataset } from "@/lib/data/stats";
 import { requireSuperadmin } from "@/lib/dal";
-import { dayLabel, durationLabel, fmt1, nyDayKey, shareLabel } from "@/lib/format";
+import { dayLabel, durationLabel, fmt1, nouns, nyDayKey, shareLabel } from "@/lib/format";
 import { topicInfo } from "@/lib/roasts";
 import {
   characterChecks,
@@ -56,7 +56,6 @@ const STAMP = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
-const nouns = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
 const signed = (x: number) => `${x > 0 ? "+" : x < 0 ? "−" : ""}${fmt1(Math.abs(x))}`;
 
 // "avg 4.5 from 3": a mean only from two scores; one score is shown as itself
@@ -260,7 +259,15 @@ function HarshnessChart({ rows, roasts }: { rows: CriticHarshness[]; roasts: num
           { label: "Highest", numeric: true },
           { label: "Posted", numeric: true },
         ],
-        rows: rows.map((r) => [r.critic.name, r.n, r.scored, fmt1(r.mean), r.min ?? "–", r.max ?? "–", r.posted]),
+        rows: rows.map((r) => [
+          r.critic.name,
+          r.n,
+          r.scored,
+          r.scored >= 2 ? fmt1(r.mean) : "–",
+          r.min ?? "–",
+          r.max ?? "–",
+          r.posted,
+        ]),
       }}
     >
       <RangeStrip
@@ -439,11 +446,14 @@ function InflationChart({ data }: { data: StatsDataset }) {
   const rows = panelInflation(data.images, data.captions);
   const label = (topic: string, createdAt: string) =>
     `${topicInfo(topic)?.label ?? topic}, ${dayLabel(nyDayKey(createdAt))}`;
+  // The biggest changes either way, kept in boost-to-drop order
+  const biggest = new Set([...rows].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, LIST_LIMIT));
+  const shown = rows.filter((r) => biggest.has(r));
 
-  const avgShift = rows.length >= 3 ? mean(rows.map((r) => r.delta)) : null;
+  const avgShift = rows.length >= 5 ? mean(rows.map((r) => r.delta)) : null;
   const shift = avgShift === null ? null : round1(avgShift);
   let summary: string;
-  if (shift === null) summary = "A summary appears once 3 posts can be compared.";
+  if (shift === null) summary = "A summary appears once 5 posts can be compared.";
   else if (shift > 0) summary = `On average, posting makes the panel look ${fmt1(shift)} points kinder.`;
   else if (shift < 0) summary = `On average, posting makes the panel look ${fmt1(-shift)} points harsher.`;
   else summary = "On average, posting doesn’t change the panel’s score.";
@@ -492,7 +502,7 @@ function InflationChart({ data }: { data: StatsDataset }) {
       <Dumbbell
         fromClass="bg-critic"
         toClass="bg-crowd"
-        rows={rows.slice(0, LIST_LIMIT).map((r) => {
+        rows={shown.map((r) => {
           const [full, pub] = [fmt1(r.fullScore), fmt1(r.publicScore)];
           return {
             key: r.imageId,
@@ -732,7 +742,13 @@ function TopicsChart({ data, roastPhotos }: { data: StatsDataset; roastPhotos: n
           { label: "Posted", numeric: true },
           { label: "Average score", numeric: true },
         ],
-        rows: all.map((t) => [t.label, t.posts, t.roasts, t.publicRoasts, fmt1(t.avgRating)]),
+        rows: all.map((t) => [
+          t.label,
+          t.posts,
+          t.roasts,
+          t.publicRoasts,
+          t.scored >= 2 ? fmt1(t.avgRating) : "–",
+        ]),
       }}
     >
       <BarList

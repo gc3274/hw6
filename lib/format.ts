@@ -7,6 +7,11 @@ export function shareLabel(part: number, total: number): string {
   return total >= 10 ? `${label} (${Math.round((part / total) * 100)}%)` : label;
 }
 
+// "1 roast", "2,400 roasts"; pass the plural when adding "s" is wrong
+export function nouns(n: number, one: string, many = `${one}s`): string {
+  return `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
+}
+
 // One decimal, rounded the same way as panelScore; "–" when there is no number
 export function fmt1(x: number | null): string {
   if (x === null || !Number.isFinite(x)) return "–";

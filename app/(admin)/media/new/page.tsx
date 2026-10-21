@@ -11,6 +11,7 @@ import { card, errorBox, textLink } from "@/components/ui";
 import { isUuid } from "@/lib/captions";
 import { getPostForCreate, listRoastPosts, type PostForCreate, type RoastPost } from "@/lib/data/media";
 import { requireSuperadmin } from "@/lib/dal";
+import { nouns } from "@/lib/format";
 import { CREATE_ERRORS, criticChoices } from "@/lib/media";
 import { hrefWith, parsePage } from "@/lib/params";
 import { topicInfo } from "@/lib/roasts";
@@ -36,7 +37,6 @@ const DATE = new Intl.DateTimeFormat("en-US", {
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
-const nouns = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
 
 const ownerName = (owner: { name: string | null }) => owner.name ?? "someone with no name yet";
 

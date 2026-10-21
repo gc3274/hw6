@@ -11,6 +11,7 @@ import { errorBox, focusRing, input, label, textLink } from "@/components/ui";
 import type { CriticOption } from "@/lib/data/media";
 import { listRatings, listVotes, type RatingRow } from "@/lib/data/votes";
 import { requireSuperadmin } from "@/lib/dal";
+import { nouns } from "@/lib/format";
 import { hrefWith, parseVoteQuery, type VoteQuery } from "@/lib/params";
 import { topicInfo, TOPICS } from "@/lib/roasts";
 import type { LedgerVote } from "@/lib/votes";
@@ -38,7 +39,6 @@ const DATE_TIME = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
-const nouns = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
 
 const VIEWS = [
   { view: "votes", label: "Votes" },

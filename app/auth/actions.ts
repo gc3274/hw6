@@ -1,4 +1,5 @@
-// signOut copied from gc3274/hw1@3eb3337 app/auth/actions.ts; it always lands on /login here
+// Copied from gc3274/hw1@3eb3337 app/auth/actions.ts; keep in sync
+// signOut always lands on /login here
 "use server";
 
 import { revalidatePath } from "next/cache";

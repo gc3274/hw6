@@ -11,6 +11,7 @@ import { button, errorBox, input, label, noticeBox, textLink } from "@/component
 import { isUuid } from "@/lib/captions";
 import { listMedia, type CriticOption, type MediaRow } from "@/lib/data/media";
 import { requireSuperadmin } from "@/lib/dal";
+import { nouns } from "@/lib/format";
 import { hrefWith, parseMediaQuery, type MediaQuery } from "@/lib/params";
 import { topicInfo, TOPICS } from "@/lib/roasts";
 
@@ -33,9 +34,6 @@ const NOUNS: Record<MediaQuery["kind"], [string, string]> = {
   legacy: ["legacy caption", "legacy captions"],
   all: ["roast or caption", "roasts and captions"],
 };
-
-const nouns = (n: number, [one, many]: [string, string]) =>
-  `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
@@ -195,7 +193,7 @@ function Results({ query, rows, total }: { query: MediaQuery; rows: MediaRow[]; 
       {scope}
       <section aria-labelledby="media-count" className="mt-6">
         <p id="media-count" className="text-sm text-muted">
-          {`${nouns(total, NOUNS[query.kind])}${isNarrowed(query) ? " match" : ""}, newest first`}
+          {`${nouns(total, ...NOUNS[query.kind])}${isNarrowed(query) ? (total === 1 ? " matches" : " match") : ""}, newest first`}
         </p>
         <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-surface px-4">
           <table className="w-full min-w-3xl border-collapse text-sm">

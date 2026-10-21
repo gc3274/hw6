@@ -1,5 +1,5 @@
-// Code exchange copied from gc3274/hw1@3eb3337 app/auth/callback/route.ts; the
-// destination and the error handling are admin-only
+// Copied from gc3274/hw1@3eb3337 app/auth/callback/route.ts; keep in sync
+// Only the code exchange is shared; the destination and the error handling are admin-only
 import type { NextRequest } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
   const code = params.get("code");
 
   if (providerError) {
-    console.error("Google sign-in returned an error:", providerError.slice(0, 200));
+    // Quoted so a newline in the provider text can't fake a log line
+    console.error("Google sign-in returned an error:", JSON.stringify(providerError.slice(0, 200)));
     redirect("/login?error=1");
   }
   if (!code) redirect("/login?error=1");

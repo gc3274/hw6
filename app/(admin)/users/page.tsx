@@ -8,6 +8,7 @@ import Pagination from "@/components/Pagination";
 import { errorBox, input, label, textLink } from "@/components/ui";
 import { listUsers, type UserRow } from "@/lib/data/users";
 import { requireSuperadmin } from "@/lib/dal";
+import { nouns } from "@/lib/format";
 import { hrefWith, parseUserQuery, type UserQuery } from "@/lib/params";
 import { fullName } from "@/lib/users";
 
@@ -25,7 +26,6 @@ const JOINED = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-const nouns = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
 
 export default async function UsersPage({ searchParams }: PageProps<"/users">) {
   await requireSuperadmin();
@@ -116,7 +116,7 @@ function Results({
   return (
     <section aria-labelledby="users-count" className="mt-6">
       <p id="users-count" className="text-sm text-muted">
-        {filtered ? `${nouns(total, "user")} match` : nouns(total, "user")}
+        {filtered ? `${nouns(total, "user")} ${total === 1 ? "matches" : "match"}` : nouns(total, "user")}
       </p>
       <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-surface px-4">
         <table className="w-full min-w-3xl border-collapse text-sm">

@@ -1,4 +1,5 @@
-// Cookie plumbing copied from gc3274/hw1@3eb3337 lib/supabase/proxy.ts; the gate is admin-only
+// Copied from gc3274/hw1@3eb3337 lib/supabase/proxy.ts; keep in sync
+// Only the cookie plumbing is shared; the gate is admin-only
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";

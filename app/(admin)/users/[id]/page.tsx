@@ -17,6 +17,7 @@ import {
   type UserVote,
 } from "@/lib/data/users";
 import { requireSuperadmin } from "@/lib/dal";
+import { nouns } from "@/lib/format";
 import { hrefWith } from "@/lib/params";
 import { panelScore, topicInfo } from "@/lib/roasts";
 import { fullName } from "@/lib/users";
@@ -35,7 +36,6 @@ const DATE = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-const nouns = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
 
 function When({ iso }: { iso: string }) {
   return <time dateTime={iso}>{DATE.format(new Date(iso))}</time>;
@@ -163,13 +163,13 @@ function Posts({ user }: { user: UserDetail }) {
           </Link>
         )}
       </div>
-      <p className="mt-1 text-sm text-muted">
-        {postCount === 0
-          ? "Nothing uploaded yet."
-          : postCount > POSTS_LIMIT
+      {postCount > 0 && (
+        <p className="mt-1 text-sm text-muted">
+          {postCount > POSTS_LIMIT
             ? `Latest ${POSTS_LIMIT} of ${postCount.toLocaleString("en-US")}, newest first.`
             : `${nouns(postCount, "post")}, newest first.`}
-      </p>
+        </p>
+      )}
       {posts.length === 0 ? (
         <div className="mt-4">
           <EmptyState title="No posts yet.">
@@ -238,13 +238,13 @@ function Votes({ user }: { user: UserDetail }) {
       <h2 id="votes-heading" className="text-xl font-semibold tracking-tight">
         Votes cast
       </h2>
-      <p className="mt-1 text-sm text-muted">
-        {total === 0
-          ? "No votes yet."
-          : `${upvotes.toLocaleString("en-US")} up, ${downvotes.toLocaleString("en-US")} down. ${
-              total > VOTES_LIMIT ? `Latest ${VOTES_LIMIT} below.` : "Newest first."
-            }`}
-      </p>
+      {total > 0 && (
+        <p className="mt-1 text-sm text-muted">
+          {`${upvotes.toLocaleString("en-US")} up, ${downvotes.toLocaleString("en-US")} down. ${
+            total > VOTES_LIMIT ? `Latest ${VOTES_LIMIT} below.` : "Newest first."
+          }`}
+        </p>
+      )}
       {votes.length === 0 ? (
         <div className="mt-4">
           <EmptyState title="No votes yet.">
