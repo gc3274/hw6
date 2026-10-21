@@ -52,3 +52,22 @@ export function sentenceCount(s: string): number {
 export function codePoints(s: string): number {
   return Array.from(s).length;
 }
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// "2026-10-05" -> "Oct 5". Takes a day key, so the time zone was already applied.
+export function dayLabel(dayKey: string): string {
+  const [, month, day] = dayKey.split("-").map(Number);
+  return `${MONTHS[month - 1]} ${day}`;
+}
+
+const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"}`;
+
+// A wait in the largest unit that reads naturally: "4 minutes", "2 hours", "3 days"
+export function durationLabel(minutes: number): string {
+  if (minutes < 1) return "under a minute";
+  if (Math.round(minutes) < 60) return plural(Math.round(minutes), "minute");
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return plural(hours, "hour");
+  return plural(Math.round(minutes / (24 * 60)), "day");
+}

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { codePoints, countEmoji, fmt1, nyDayKey, sentenceCount, shareLabel } from "@/lib/format";
+import {
+  codePoints,
+  countEmoji,
+  dayLabel,
+  durationLabel,
+  fmt1,
+  nyDayKey,
+  sentenceCount,
+  shareLabel,
+} from "@/lib/format";
 
 describe("shareLabel", () => {
   it("says none yet when there is nothing to count", () => {
@@ -119,5 +128,33 @@ describe("codePoints", () => {
     expect(codePoints("🔥🔥")).toBe(2);
     expect(codePoints("abc")).toBe(3);
     expect(codePoints("")).toBe(0);
+  });
+});
+
+describe("dayLabel", () => {
+  it("writes a day key as a short month and day", () => {
+    expect(dayLabel("2026-09-28")).toBe("Sep 28");
+    expect(dayLabel("2026-10-05")).toBe("Oct 5");
+    expect(dayLabel("2027-01-01")).toBe("Jan 1");
+  });
+});
+
+describe("durationLabel", () => {
+  it("says under a minute for very short waits", () => {
+    expect(durationLabel(0)).toBe("under a minute");
+    expect(durationLabel(0.6)).toBe("under a minute");
+  });
+
+  it("uses whole minutes below an hour", () => {
+    expect(durationLabel(1)).toBe("1 minute");
+    expect(durationLabel(4)).toBe("4 minutes");
+    expect(durationLabel(59.4)).toBe("59 minutes");
+  });
+
+  it("switches to hours, then days, without printing 60 minutes or 24 hours", () => {
+    expect(durationLabel(59.6)).toBe("1 hour");
+    expect(durationLabel(90)).toBe("2 hours");
+    expect(durationLabel(1430)).toBe("1 day");
+    expect(durationLabel(3 * 24 * 60)).toBe("3 days");
   });
 });
