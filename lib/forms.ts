@@ -12,7 +12,7 @@ export type FormState<F extends string = string> = {
   errors?: Partial<Record<F, string>>;
 };
 
-export const FORM_INITIAL: FormState<never> = { ok: false, message: "" };
+export const FORM_INITIAL: FormState = { ok: false, message: "" };
 
 export const FIX_FIELDS = "Fix the fields marked below.";
 export const DB_DOWN = "Couldn’t save: the database didn’t answer. Try again.";
