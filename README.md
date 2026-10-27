@@ -14,6 +14,18 @@ Stack: Next.js 16.3.5 (App Router, `proxy.ts`), React 19, Tailwind 4, Supabase (
 | Read users (profiles) | `/users` (search, superadmin filter, activity counts) and `/users/[id]` (account, posts, last 20 votes cast). No write controls |
 | Create, read, update and delete AI-generated media | Roasts are the AI-generated media. `/media` lists them, `/media/new` generates a new roast with Gemini for a chosen post and critic, and `/media/[id]` shows one and lets you edit its words, tip, score and visibility, or delete it |
 | Read votes and ratings | `/votes?view=votes` (the vote ledger, with self-votes flagged) and `/votes?view=ratings` (critic scores by critic and topic) |
+| Read prompt chains | `/prompt-chains` and `/prompt-chains/[id]`. A prompt chain is the main app's roast pipeline (the course schema calls these humor flavors). Two are seeded: One pass, and Look, then roast |
+| Read prompt chain steps | `/prompt-chains/[id]` lists each step in order with its model, temperature, thinking level, input and output, and full system and user prompt templates |
+| Read and update the prompt chain mix | `/chain-mix`: one weight per chain, adding up to 100, saved in one write. Each roast run picks a chain by these weights |
+| Create, read, update and delete terms | `/terms`. The top 30 for a photo's topic go into the roast prompt |
+| Create, read, update and delete AI generation examples | `/examples` (example reviews). The top 5 for a photo's topic go into the roast prompt |
+| Create, read, update and delete LLM models | `/llm-models`. Steps call a model's ID on the next run; a model a step uses can't be deleted |
+| Create, read, update and delete LLM providers | `/llm-providers`. Only the `google` provider is callable by the app; a provider with models can't be deleted |
+| Read generation requests | `/requests` and `/requests/[id]`: one row per roast run, from the main app or from here, with status, chain, timing and its model calls |
+| Read LLM responses | `/llm-responses` and `/llm-responses/[id]`: one row per model call, with the prompts sent, the raw answer, the model that answered and any fallback |
+| Create, read, update and delete allowed sign-up domains | `/signup-domains`. Checked for new accounts by the Supabase Before User Created hook |
+| Create, read, update and delete whitelisted email addresses | `/whitelist`. Checked by the same hook |
+| Create (with upload), read, update and delete images | `/images`, `/images/new` (upload a photo) and `/images/[id]` (edit its note, and its topic while it has no roasts; delete it with its roasts) |
 | Every route behind Google sign-in plus `profiles.is_superadmin` | [Access control](#access-control) |
 | The lockout question | [Won't the first admin be locked out?](#wont-the-first-admin-be-locked-out) |
 
@@ -22,6 +34,15 @@ Rules the roast pages keep:
 - Unpublishing is always allowed. Publishing is allowed only if the owner posted that roast before (`posted_at` is set), because a public roast makes its photo public.
 - Legacy captions from Caption City are labelled "Legacy caption". Only their words and visibility can be edited, and legacy posts can't get new roasts.
 - The uploader's note and the prompt are shown only on `/media/[id]`, labelled "Private, never shown in the app".
+
+Rules the new pages keep:
+- Chains and steps are read-only here; they come from the migration. What an admin can change is which chain runs (the mix), the models the steps point at, and the terms and examples that go into the prompts. Every change applies to the next roast run.
+- Deletes that would break a run are refused with the reason: a provider that still has models, or a model a step still uses.
+- A photo's topic is fixed once it has roasts (its critics were picked for that topic), and legacy caption photos stay legacy.
+- Photos uploaded here belong to the admin who uploaded them, so they show on that admin's dashboard in the main app, and their roasts are posted from there.
+- The sign-up pages always show who can sign up right now. Only new accounts are checked, so removing a domain never locks anyone out.
+
+The tables and the sign-up hook come from the main app's migration `20261028120000_prompt_chains_and_observability.sql`.
 
 ## Routes
 
@@ -32,8 +53,19 @@ Rules the roast pages keep:
 | `/not-authorized` | Signed in | Your email, how to get access, and Sign out |
 | `/` | Superadmin | Stats overview |
 | `/users`, `/users/[id]` | Superadmin | Users (read) |
-| `/media`, `/media/new`, `/media/[id]` | Superadmin | Roasts (create, read, update, delete). `/media/new` has `maxDuration = 60` for the Gemini call |
+| `/images`, `/images/new`, `/images/[id]` | Superadmin | Images (create with upload, read, update, delete) |
+| `/media`, `/media/new`, `/media/[id]` | Superadmin | Roasts (create, read, update, delete). `/media/new` has `maxDuration = 60` for the Gemini calls |
 | `/votes` | Superadmin | Votes and ratings (read) |
+| `/prompt-chains`, `/prompt-chains/[id]` | Superadmin | Prompt chains and their steps (read) |
+| `/chain-mix` | Superadmin | The chain mix (read, update) |
+| `/terms`, `/terms/new`, `/terms/[id]` | Superadmin | Terms (create, read, update, delete) |
+| `/examples`, `/examples/new`, `/examples/[id]` | Superadmin | Example reviews (create, read, update, delete) |
+| `/llm-models`, `/llm-models/new`, `/llm-models/[id]` | Superadmin | LLM models (create, read, update, delete) |
+| `/llm-providers`, `/llm-providers/new`, `/llm-providers/[id]` | Superadmin | LLM providers (create, read, update, delete) |
+| `/requests`, `/requests/[id]` | Superadmin | Generation requests (read) |
+| `/llm-responses`, `/llm-responses/[id]` | Superadmin | LLM responses (read) |
+| `/signup-domains`, `/signup-domains/[id]` | Superadmin | Allowed sign-up domains (create, read, update, delete) |
+| `/whitelist`, `/whitelist/[id]` | Superadmin | Whitelisted email addresses (create, read, update, delete) |
 
 Plus `not-found` and `error`. Every response sends `X-Frame-Options: DENY`, and the root layout sets `robots: noindex`.
 
@@ -148,7 +180,8 @@ The superadmin migration lives in the main app repo: [`supabase/migrations/20261
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same as the main app. Or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which wins if both are set |
    | `SUPABASE_SERVICE_ROLE_KEY` | The `service_role` key or an `sb_secret_…` key. Server only: never give it a `NEXT_PUBLIC_` prefix. Read only in `lib/supabase/admin.ts` |
    | `GEMINI_API_KEY` | Server only. The main app's key works; both apps then share its quota |
-   | `GEMINI_MODEL` | Optional. Defaults to `gemini-3.5-flash`, with `gemini-flash-lite-latest` tried once when it is busy |
+
+   The model is not an environment variable any more: it comes from the prompt chain in the database, with `gemini-flash-lite-latest` tried once when a step's model is busy, missing or refuses the request.
 
 5. **Run it.** `npm install`, then `npm run dev`, and open [http://localhost:3001](http://localhost:3001). The admin always runs on port 3001, next to the main app on 3000.
 6. **Supabase redirect URLs.** Under Authentication → URL Configuration → Redirect URLs, add:
@@ -165,7 +198,7 @@ The superadmin migration lives in the main app repo: [`supabase/migrations/20261
 3. Add the environment variables. Set `SUPABASE_SERVICE_ROLE_KEY` for **Production only** and mark it **Sensitive**. Preview deployments then have no key, and their data pages fail closed with an error instead of exposing anything.
 4. Settings → Deployment Protection → Vercel Authentication: **Disabled**, so the URLs open without a Vercel login. The Google sign-in and the superadmin flag still guard every page.
 5. Add the production domain and the deployment URL pattern to the Supabase redirect URLs (Setup step 6).
-6. Check in an Incognito window: `/` goes to `/login`; signing in as the admin opens the overview; another Google account lands on `/not-authorized`. Then revoke the flag in SQL and check that the next click goes to `/not-authorized`.
+6. Check in an Incognito window: `/` goes to `/login`; signing in as the admin opens the overview; another Google account that already has an account lands on `/not-authorized`. A brand-new account outside the sign-up lists is stopped by the sign-up hook and lands on `/login?error=1` instead. Then revoke the flag in SQL and check that the next click goes to `/not-authorized`.
 
 Every push to `main` deploys to production. Each production deployment also keeps its own commit-specific URL (`hw6-<hash>-gc3274-3854.vercel.app`), and that URL has the production environment, service key included.
 
@@ -176,7 +209,7 @@ Every push to `main` deploys to production. Each production deployment also keep
 | `npm run dev` | Dev server on port 3001 |
 | `npm run build` / `npm start` | Production build, and a server for it on port 3001 |
 | `npm run lint` | ESLint |
-| `npm test` | vitest: the gate, params, media rules, formatting, stats and the architecture guards |
+| `npm test` | vitest: the gate, params, the form rules of every section, the prompt chain runner, formatting, stats and the architecture guards |
 | `npx next typegen && npx tsc --noEmit` | Type check (route types such as `PageProps` are generated) |
 
 After a build, the service key must not be anywhere in the client bundle. Both of these must print nothing:
@@ -204,13 +237,17 @@ curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' \
 - **The proxy reads the database on every request.** Next's docs advise against database checks in the proxy, since it also runs for prefetches. It is accepted here because admin traffic is tiny and it makes revocation immediate. Any error counts as "no".
 - **Revocation and open tabs.** Revoking the flag refuses the next request, but a page that is already rendered stays visible in an open tab until it is reloaded or left.
 - **Supabase auth cookies are readable by JavaScript** (the `@supabase/ssr` default), so an XSS bug would expose the admin session. Roast text is always rendered as plain text, and no page renders raw HTML.
-- **Generating roasts shares the main app's Gemini key and free-tier quota.** Admins have no daily cap, and admin generations are not counted in `generation_attempts` (they would use up the owner's daily posts). The free tier can be busy; the form says so.
+- **Generating roasts shares the main app's Gemini key and free-tier quota.** Admins have no daily cap. Admin runs are logged in `generation_requests` with source `admin` under the admin, so they never use up the owner's daily posts and the overview's pipeline stats leave them out. The free tier can be busy; the form says so.
 - **Admin-generated roasts start private and can't be published from here**, because the owner never posted them. The owner can post them from the main app.
 - **Edits keep the roast's votes and its `posted_at`,** and the words are still shown as the critic's. That is trusted admin power.
-- **Deleting the last roast on a post** keeps the image row and the file. The post disappears from the public app, and its owner sees an empty post.
+- **Deleting the last roast on a post** keeps the image row and the file. The post disappears from the public app, and its owner sees an empty post. Delete the photo itself from `/images/[id]`.
+- **An abandoned upload leaves a file.** If the tab closes between the upload and the save on `/images/new`, the file stays in the admin's storage folder with no images row. Nothing links to it.
+- **The overview's fallback share is a guess** from the model name (`lite`) stored on each roast. The exact record is `llm_responses.is_fallback`, on `/llm-responses`.
+- **Logs are kept forever** and include each run's prompts, which contain the uploader's note. Only admins can read them.
+- **A run cut off by the platform stays `pending`.** The requests pages show a pending row older than two minutes as "unfinished".
 - **Stats read whole tables** in pages of 1,000 rows, up to 20,000 rows per table; past that the overview says which tables were cut short. At that size the totals should move into SQL.
 - **Small numbers.** Counts are always shown, an average needs at least 2 scores, and the crowd verdict needs at least 5 voted roasts. Below that the charts say there isn't enough data yet.
 - **Days and weeks use New York time.**
 - **`profiles.email` is user-supplied.** The user detail page shows the sign-in email from Supabase Auth as the one to trust.
-- **Signing in creates a user.** The first Google sign-in here creates an `auth.users` row and a profile in the shared project, the same as signing in to the main app.
-- **Copied code can drift.** Some files are copied from the main app: `lib/roasts.ts`, `lib/gemini.ts`, part of `lib/captions.ts`, the Supabase clients, and the sign-in and sign-out code. Each starts with a comment naming the main app commit it came from.
+- **Signing in creates a user.** The first Google sign-in here creates an `auth.users` row and a profile in the shared project, the same as signing in to the main app, so it goes through the same sign-up hook.
+- **Copied code can drift.** Some files are copied from the main app: `lib/roasts.ts`, `lib/chains.ts`, `lib/gemini.ts`, `lib/resize-image.ts`, part of `lib/captions.ts`, the Supabase clients, and the sign-in and sign-out code, plus the tests of the chain runner. Each starts with a comment naming the main app commit it came from. `lib/chains.ts` and `lib/gemini.ts` match the main app line for line after that comment, so `diff <(tail -n +2 lib/chains.ts) ../hw2/lib/chains.ts` should print nothing.
