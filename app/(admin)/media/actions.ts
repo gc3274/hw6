@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { IMAGE_BUCKET, IMAGE_MAX_BYTES, isUuid } from "@/lib/captions";
+import { RUN_BUDGET_MS } from "@/lib/chains";
+import { finishRequest, loadChainConfig, logResponse, startRequest, type RequestStatus } from "@/lib/data/generation";
 import { requireSuperadmin } from "@/lib/dal";
 import { generateRoasts } from "@/lib/gemini";
 import {
@@ -30,11 +32,19 @@ const DB_DOWN: EditState = { ok: false, message: "Couldn’t save: the database 
 const FIX_FIELDS = "Fix the fields marked below.";
 
 type Created = { ok: true; id: string } | { ok: false; error: string };
+// What the request log records about the run. status and detail are set on failure.
+type Run = { requestId: string | null; chainId: number | null; configProblem: string | null; status: RequestStatus; detail: string | null };
 
 const PHOTO_MB = IMAGE_MAX_BYTES / (1024 * 1024);
 
 // Everything after the form check. Never redirects, so createRoast can call it in a try.
-async function generateRoast(imageId: string, criticId: number): Promise<Created> {
+async function generateRoast(
+  adminId: string,
+  imageId: string,
+  criticId: number,
+  run: Run,
+  startedAt: number,
+): Promise<Created> {
   const db = await adminDb();
   const [imageRead, criticRead] = await Promise.all([
     db
@@ -60,28 +70,47 @@ async function generateRoast(imageId: string, criticId: number): Promise<Created
   const refusal = createRefusal(image, critic);
   if (refusal || !image || !critic || !topic) return { ok: false, error: refusal ?? CREATE_ERRORS.gone };
 
+  // Logged before the model is called, like a run from the main app
+  run.requestId = await startRequest({ userId: adminId, imagePath: image.image_path, imageId: image.id, topic });
+  if (!run.requestId) {
+    return { ok: false, error: "Couldn’t start: the request log couldn’t be written. Try again." };
+  }
+  const requestId = run.requestId;
+  const failRun = (error: string, detail: string): Created => {
+    run.detail = detail;
+    return { ok: false, error };
+  };
+
   const { data: file, error: downloadError } = await db.storage.from(IMAGE_BUCKET).download(image.image_path);
   if (downloadError || !file) {
     console.error("Downloading the post's photo failed", downloadError?.message ?? "no data");
-    return { ok: false, error: "Couldn’t read the post’s photo from storage. Try again." };
+    return failRun("Couldn’t read the post’s photo from storage. Try again.", "The photo couldn't be downloaded.");
   }
   if (file.size > IMAGE_MAX_BYTES) {
-    return { ok: false, error: `The post’s photo is over ${PHOTO_MB} MB, so it can’t be sent to Gemini.` };
+    return failRun(`The post’s photo is over ${PHOTO_MB} MB, so it can’t be sent to Gemini.`, "The photo is over 5 MB.");
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (!isJpeg(bytes)) {
-    return { ok: false, error: "The post’s photo isn’t a JPEG, so it can’t be sent to Gemini." };
+    return failRun("The post’s photo isn’t a JPEG, so it can’t be sent to Gemini.", "The file isn't a JPEG.");
   }
 
+  const config = await loadChainConfig(topic);
+  run.chainId = config.chain.id;
+  run.configProblem = config.problem;
+
   const result = await generateRoasts({
+    chain: config.chain,
+    context: { topic, critics: [critic], note: image.context ?? "", terms: config.terms, examples: config.examples },
     image: { data: Buffer.from(bytes).toString("base64"), mimeType: "image/jpeg" },
-    context: image.context ?? "",
-    topic,
-    critics: [critic],
+    deadline: startedAt + RUN_BUDGET_MS,
+    onResponse: (log) => logResponse(requestId, log),
   });
-  if (!result.ok) return { ok: false, error: describeGenerateError(result.reason) };
+  if (!result.ok) {
+    if (result.reason !== "not_configured") run.status = result.reason;
+    return failRun(describeGenerateError(result.reason), result.error);
+  }
   const draft = result.roasts.find((r) => r.criticId === critic.id);
-  if (!draft) return { ok: false, error: describeGenerateError("failed") };
+  if (!draft) return failRun(describeGenerateError("failed"), "No roast for the chosen critic.");
 
   const { data: saved, error } = await db
     .from("captions")
@@ -90,28 +119,46 @@ async function generateRoast(imageId: string, criticId: number): Promise<Created
     .single<{ id: string }>();
   if (error || !saved) {
     console.error("Saving the generated roast failed", error);
-    return { ok: false, error: "Couldn’t save the roast: the database didn’t answer. Try again." };
+    return failRun(
+      "Couldn’t save the roast: the database didn’t answer. Try again.",
+      `Saving the roast failed: ${error?.message ?? "no row"}`,
+    );
   }
   return { ok: true, id: saved.id };
 }
 
 // One critic's roast for a post already in the app, saved private under the post's
-// owner. No generation_attempts row: its path check refuses the admin, and logging
-// it as the owner would spend their daily uploads. /media/new sets maxDuration for
-// the Gemini call.
+// owner. Logged in generation_requests as source 'admin' under the admin, so it never
+// spends the owner's daily posts. /media/new sets maxDuration for the Gemini calls.
 export async function createRoast(_prev: CreateState, fd: FormData): Promise<CreateState> {
-  await requireSuperadmin();
+  const { userId } = await requireSuperadmin();
+  // The model calls' time budget counts from here
+  const startedAt = Date.now();
 
   const input = parseCreateForm(fd);
   if (!input.ok) return { error: input.error };
 
+  const run: Run = { requestId: null, chainId: null, configProblem: null, status: "failed", detail: null };
   let created: Created;
   try {
-    created = await generateRoast(input.imageId, input.criticId);
+    created = await generateRoast(userId, input.imageId, input.criticId, run, startedAt);
   } catch (error) {
     unstable_rethrow(error);
     console.error("Generating the roast failed", error);
+    run.detail = `Unexpected error: ${error instanceof Error ? error.message : String(error)}`;
     created = { ok: false, error: "Couldn’t generate the roast. Try again." };
+  }
+
+  if (run.requestId) {
+    const notes = [created.ok ? null : run.detail, run.configProblem].filter(Boolean);
+    await finishRequest(run.requestId, {
+      status: created.ok ? "succeeded" : run.status,
+      error: notes.length > 0 ? notes.join(" ") : null,
+      chainId: run.chainId,
+      imageId: input.imageId,
+      roastCount: created.ok ? 1 : 0,
+      durationMs: Date.now() - startedAt,
+    });
   }
   if (!created.ok) return { error: created.error };
 

@@ -24,8 +24,8 @@ export const metadata: Metadata = {
 // Read on every request: this page must never be prerendered with service-role data
 export const dynamic = "force-dynamic";
 
-// Also the limit for createRoast posted from this page: up to two 25-second
-// Gemini tries plus the photo download and the insert
+// Also the limit for createRoast posted from this page: up to RUN_BUDGET_MS of
+// model calls (lib/chains.ts) plus the photo download and the insert
 export const maxDuration = 60;
 
 const DATE = new Intl.DateTimeFormat("en-US", {
