@@ -80,7 +80,8 @@ export default async function MediaPage({ searchParams }: PageProps<"/media">) {
         </p>
       )}
 
-      <div className="mt-6">
+      {/* Keyed by the URL, so "Clear filters" also resets the fields */}
+      <div key={hrefWith("/media", query)} className="mt-6">
         <Filters query={query} critics={result?.critics ?? []} />
       </div>
 

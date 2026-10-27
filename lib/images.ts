@@ -96,13 +96,15 @@ export const IMAGE_CONSTRAINTS: Record<string, ImageField> = {
 export function deleteWarning(
   roasts: number,
   votes: number,
+  runs: number,
   noun: [string, string] = ["roast", "roasts"],
 ): string {
   let what: string;
   if (roasts === 0) what = "Deletes the photo.";
   else if (votes === 0) what = `Deletes the photo and its ${nouns(roasts, ...noun)}.`;
   else what = `Deletes the photo, its ${nouns(roasts, ...noun)} and ${roasts === 1 ? "its" : "their"} ${nouns(votes, "vote")}.`;
-  return `${what} Request logs keep a record of the run without the photo. This can’t be undone.`;
+  const logs = runs === 0 ? "" : ` Its ${nouns(runs, "logged roast run")} ${runs === 1 ? "stays" : "stay"}, without the photo.`;
+  return `${what}${logs} This can’t be undone.`;
 }
 
 // Uploads ---------------------------------------------------------------------

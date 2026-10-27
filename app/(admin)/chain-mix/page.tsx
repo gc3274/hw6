@@ -72,7 +72,8 @@ export default async function ChainMixPage() {
             ) : (
               "Never saved yet."
             )}{" "}
-            A chain at 0% never runs.
+            A chain at 0% is never picked, though the seeded One pass chain still runs as the
+            fallback when the picked chain can’t run.
           </p>
           <div className="mt-5">
             <MixForm chains={mix.chains} />

@@ -205,21 +205,23 @@ describe("IMAGE_CONSTRAINTS", () => {
 });
 
 describe("deleteWarning", () => {
-  const tail = "Request logs keep a record of the run without the photo. This can’t be undone.";
+  const end = "This can’t be undone.";
 
   it.each([
-    [0, 0, `Deletes the photo. ${tail}`],
-    [3, 0, `Deletes the photo and its 3 roasts. ${tail}`],
-    [3, 5, `Deletes the photo, its 3 roasts and their 5 votes. ${tail}`],
-    [1, 1, `Deletes the photo, its 1 roast and its 1 vote. ${tail}`],
-    [2, 1200, `Deletes the photo, its 2 roasts and their 1,200 votes. ${tail}`],
-  ])("%i roasts, %i votes", (roasts, votes, expected) => {
-    expect(deleteWarning(roasts, votes)).toBe(expected);
+    [0, 0, 0, `Deletes the photo. ${end}`],
+    [3, 0, 0, `Deletes the photo and its 3 roasts. ${end}`],
+    [3, 5, 0, `Deletes the photo, its 3 roasts and their 5 votes. ${end}`],
+    [1, 1, 0, `Deletes the photo, its 1 roast and its 1 vote. ${end}`],
+    [2, 1200, 0, `Deletes the photo, its 2 roasts and their 1,200 votes. ${end}`],
+    [1, 0, 1, `Deletes the photo and its 1 roast. Its 1 logged roast run stays, without the photo. ${end}`],
+    [4, 0, 2, `Deletes the photo and its 4 roasts. Its 2 logged roast runs stay, without the photo. ${end}`],
+  ])("%i roasts, %i votes, %i runs", (roasts, votes, runs, expected) => {
+    expect(deleteWarning(roasts, votes, runs)).toBe(expected);
   });
 
   it("names legacy captions on a legacy photo", () => {
-    expect(deleteWarning(2, 0, ["legacy caption", "legacy captions"])).toBe(
-      `Deletes the photo and its 2 legacy captions. ${tail}`,
+    expect(deleteWarning(2, 0, 0, ["legacy caption", "legacy captions"])).toBe(
+      `Deletes the photo and its 2 legacy captions. ${end}`,
     );
   });
 });

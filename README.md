@@ -181,7 +181,7 @@ The superadmin migration lives in the main app repo: [`supabase/migrations/20261
    | `SUPABASE_SERVICE_ROLE_KEY` | The `service_role` key or an `sb_secret_…` key. Server only: never give it a `NEXT_PUBLIC_` prefix. Read only in `lib/supabase/admin.ts` |
    | `GEMINI_API_KEY` | Server only. The main app's key works; both apps then share its quota |
 
-   The model is not an environment variable any more: it comes from the prompt chain in the database, with `gemini-flash-lite-latest` tried once when a step's model is busy, missing or refuses the request.
+   The model is not an environment variable any more: it comes from the prompt chain in the database, with `gemini-flash-lite-latest` tried once when a step's model is busy, can't be found, or rejects the request as invalid.
 
 5. **Run it.** `npm install`, then `npm run dev`, and open [http://localhost:3001](http://localhost:3001). The admin always runs on port 3001, next to the main app on 3000.
 6. **Supabase redirect URLs.** Under Authentication → URL Configuration → Redirect URLs, add:
@@ -241,7 +241,7 @@ curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' \
 - **Admin-generated roasts start private and can't be published from here**, because the owner never posted them. The owner can post them from the main app.
 - **Edits keep the roast's votes and its `posted_at`,** and the words are still shown as the critic's. That is trusted admin power.
 - **Deleting the last roast on a post** keeps the image row and the file. The post disappears from the public app, and its owner sees an empty post. Delete the photo itself from `/images/[id]`.
-- **An abandoned upload leaves a file.** If the tab closes between the upload and the save on `/images/new`, the file stays in the admin's storage folder with no images row. Nothing links to it.
+- **An abandoned upload can leave a file.** If the tab closes between the upload and the save on `/images/new`, or the save fails before the file has been checked (the database doesn't answer), the file stays in the admin's storage folder with no images row. Nothing links to it. Files that fail the size or JPEG check, or whose insert fails, are removed.
 - **The overview's fallback share is a guess** from the model name (`lite`) stored on each roast. The exact record is `llm_responses.is_fallback`, on `/llm-responses`.
 - **Logs are kept forever** and include each run's prompts, which contain the uploader's note. Only admins can read them.
 - **A run cut off by the platform stays `pending`.** The requests pages show a pending row older than two minutes as "unfinished".

@@ -193,7 +193,7 @@ export function modelDeleteWarning(responses: number): string {
   return `${logs} This can’t be undone.`;
 }
 
-export const FALLBACK_NOTE = `If a call is busy, missing or refused, the step retries once on ${FALLBACK_MODEL}.`;
+export const FALLBACK_NOTE = `If a call is busy, the model can’t be found, or the request is rejected as invalid, the step retries once on ${FALLBACK_MODEL}. A safety refusal or an unusable answer is not retried.`;
 export const UNCALLABLE_NOTE = `The app only calls “${CALLABLE_PROVIDER}” models. Steps that use a model under another provider go straight to ${FALLBACK_MODEL}.`;
 export const THINKING_NOTE =
   "Must be one the model accepts: Gemini 3 Flash takes minimal, Pro models need low or high, and older 2.5 models take none (choose Not sent).";

@@ -81,7 +81,7 @@ describe("parity with the migration", () => {
   it.each([
     ["gemini-3.5-flash", true],
     ["gemini-flash-lite-latest", true],
-    ["claude_3.5", true],
+    ["model_3.5", true],
     ["7b", true],
     ["a", true],
     ["a".repeat(80), true],

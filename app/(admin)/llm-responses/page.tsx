@@ -62,7 +62,8 @@ export default async function LlmResponsesPage({ searchParams }: PageProps<"/llm
         model row, so the model filter leaves them out.
       </p>
 
-      <div className="mt-6">
+      {/* Keyed by the URL, so "Clear filters" also resets the fields */}
+      <div key={hrefWith("/llm-responses", query)} className="mt-6">
         <Filters query={query} models={models} />
       </div>
 
@@ -137,7 +138,7 @@ function Results({ query, rows, total }: { query: ResponseQuery; rows: ResponseR
             <tr className="border-b border-line text-left">
               <th scope="col" className={th}>When</th>
               <th scope="col" className={th}>Step</th>
-              <th scope="col" className={th}>Model that answered</th>
+              <th scope="col" className={th}>Model</th>
               <th scope="col" className={th}>Fallback</th>
               <th scope="col" className={th}>Status</th>
               <th scope="col" className={`${th} text-right`}>Took</th>

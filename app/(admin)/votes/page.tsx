@@ -178,7 +178,7 @@ async function VotesView({ query }: { query: VoteQuery }) {
   return (
     <>
       <div className="mt-6">
-        <FilterBar action="/votes" showClear={isNarrowed(query)}>
+        <FilterBar key={hrefWith("/votes", query)} action="/votes" showClear={isNarrowed(query)}>
           <label className="flex flex-col gap-1">
             <span className={label}>Vote</span>
             <select name="value" defaultValue={query.value ?? ""} className={input}>
@@ -293,7 +293,12 @@ async function RatingsView({ query }: { query: VoteQuery }) {
   return (
     <>
       <div className="mt-6">
-        <FilterBar action="/votes" clearHref={viewHref("ratings")} showClear={isNarrowed(query)}>
+        <FilterBar
+          key={hrefWith("/votes", query)}
+          action="/votes"
+          clearHref={viewHref("ratings")}
+          showClear={isNarrowed(query)}
+        >
           {/* A GET form sends only its fields, so the view has to be one of them */}
           <input type="hidden" name="view" value="ratings" />
           <CriticSelect query={query} critics={result?.critics ?? []} />

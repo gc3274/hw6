@@ -36,7 +36,7 @@ export default async function NewModelPage({ searchParams }: PageProps<"/llm-mod
       </Link>
       <h1 className="mt-4 font-display text-3xl font-bold tracking-tight">Add a model</h1>
       <p className="mt-2 max-w-prose text-muted">
-        A model chain steps can call. If a call is busy, missing or refused, the step retries once on{" "}
+        A model chain steps can call. If a call is busy, the model can’t be found, or the request is rejected as invalid, the step retries once on{" "}
         {FALLBACK_MODEL}.
       </p>
 

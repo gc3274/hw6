@@ -178,6 +178,16 @@ function Chain({ request, status }: { request: RequestDetail; status: DisplaySta
       </>
     );
   }
+  if (use === "deleted") {
+    return (
+      <>
+        A deleted chain
+        <span className="mt-1 block text-xs text-muted">
+          The chain this run used has been deleted since. Its model calls below still show what ran.
+        </span>
+      </>
+    );
+  }
   const why =
     status === "legacy"
       ? "Not recorded for runs from before request logging."

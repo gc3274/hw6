@@ -144,7 +144,7 @@ export default async function PromptChainPage({ params }: PageProps<"/prompt-cha
               Fallback
             </h2>
             <p className="mt-1">
-              When a step’s model is busy, missing, refuses the request, or isn’t callable, that step
+              When a step’s model is busy, can’t be found, rejects the request as invalid, or isn’t callable, that step
               is retried once on <span className="font-mono break-all">{FALLBACK_MODEL}</span>.
             </p>
           </section>

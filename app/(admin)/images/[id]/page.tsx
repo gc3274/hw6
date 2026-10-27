@@ -156,6 +156,7 @@ export default async function ImagePage({ params, searchParams }: PageProps<"/im
                 warning={deleteWarning(
                   image.captions.length,
                   image.votes,
+                  image.runs,
                   legacy ? ["legacy caption", "legacy captions"] : undefined,
                 )}
               />

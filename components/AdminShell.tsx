@@ -46,15 +46,15 @@ export default function AdminShell({ email, children }: AdminShellProps) {
           <nav aria-label="Admin" className="mt-3">
             <div className="flex flex-col gap-y-2 lg:flex-row lg:flex-wrap lg:gap-x-6">
               {ADMIN_NAV_GROUPS.map((group) => (
-                <div key={group.label} className="flex flex-wrap items-center gap-x-1 gap-y-1">
+                <div key={group.label} className="flex items-start gap-x-1 lg:items-center">
                   {/* Not a heading: it would come before each page's h1 */}
                   <p
                     id={`nav-${group.label.toLowerCase()}`}
-                    className="w-20 shrink-0 text-xs font-semibold tracking-wide text-muted uppercase lg:w-auto lg:pr-1"
+                    className="w-20 shrink-0 pt-2 text-xs font-semibold tracking-wide text-muted uppercase lg:w-auto lg:pt-0 lg:pr-1"
                   >
                     {group.label}
                   </p>
-                  <ul aria-labelledby={`nav-${group.label.toLowerCase()}`} className="flex flex-wrap gap-1">
+                  <ul aria-labelledby={`nav-${group.label.toLowerCase()}`} className="flex min-w-0 flex-1 flex-wrap gap-1">
                     {group.items.map((item) => (
                       <li key={item.href}>
                         <NavLink href={item.href}>{item.label}</NavLink>

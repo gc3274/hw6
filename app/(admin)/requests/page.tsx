@@ -68,7 +68,8 @@ export default async function RequestsPage({ searchParams }: PageProps<"/request
         unknown.
       </p>
 
-      <div className="mt-6">
+      {/* Keyed by the URL, so "Clear filters" also resets the fields */}
+      <div key={hrefWith("/requests", query)} className="mt-6">
         <Filters query={query} chains={chains} />
       </div>
 
@@ -198,6 +199,8 @@ function Row({ row, now }: { row: RequestRow; now: number }) {
           row.chainName ?? `Chain ${row.chainId}`
         ) : use === "built-in" ? (
           "Built-in"
+        ) : use === "deleted" ? (
+          <span className="text-muted">Deleted chain</span>
         ) : (
           none
         )}

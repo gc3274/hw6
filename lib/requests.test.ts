@@ -115,9 +115,9 @@ describe("chainUse", () => {
   it.each([
     ["succeeded", 1, null, "chain"],
     ["failed", 2, "Step 1: Empty answer.", "chain"],
-    ["succeeded", null, null, "built-in"],
-    ["rejected", null, null, "built-in"],
-    ["busy", null, "Step 1: The time budget for this run was used up.", "built-in"],
+    ["succeeded", null, null, "deleted"],
+    ["rejected", null, null, "deleted"],
+    ["busy", null, "Step 1: The time budget for this run was used up.", "deleted"],
     ["failed", null, "Step 1: Unusable answer (invalid). config_fallback; no chain has a weight above 0", "built-in"],
     ["succeeded", null, "config_fallback; chain 3 not found", "built-in"],
     ["failed", null, "The photo couldn't be downloaded.", "none"],

@@ -15,6 +15,7 @@ import {
   emailWriteErrors,
   normalizeDomain,
   normalizeEmail,
+  likePattern,
   parseAccessQuery,
   signupSummary,
   validateDomain,
@@ -241,7 +242,7 @@ describe("delete warnings", () => {
   it("says new sign-ups from a domain stop and existing accounts keep working", () => {
     const warning = domainDeleteWarning("columbia.edu", { coveredBy: null, entries: 3 });
     expect(warning).toBe(
-      "New sign-ups with an email at columbia.edu or its subdomains stop at the next sign-in attempt. Existing accounts keep working. This can’t be undone.",
+      "New sign-ups with an email at columbia.edu or its subdomains stop at the next sign-in attempt, unless a subdomain or address is listed separately. Existing accounts keep working. This can’t be undone.",
     );
   });
 
@@ -280,9 +281,20 @@ describe("delete warnings", () => {
 describe("parseAccessQuery", () => {
   it.each([
     [{}, { q: null, page: 1 }],
-    [{ q: " Columbia.edu ", page: "2" }, { q: "Columbia.edu", page: 2 }],
-    [{ q: "a%b_c", page: "-1" }, { q: "abc", page: 1 }],
+    [{ q: " Columbia.edu ", page: "2" }, { q: "columbia.edu", page: 2 }],
+    [{ q: "first_last@gmail.com" }, { q: "first_last@gmail.com", page: 1 }],
+    [{ q: "me+tag@gmail.com" }, { q: "me+tag@gmail.com", page: 1 }],
+    [{ q: "a%b*c,(d)", page: "-1" }, { q: "abcd", page: 1 }],
+    [{ q: "%%" }, { q: null, page: 1 }],
   ])("reads %j", (sp, query) => {
     expect(parseAccessQuery(sp)).toEqual(query);
+  });
+});
+
+describe("likePattern", () => {
+  it("escapes LIKE wildcards so _ and \\ match themselves", () => {
+    expect(likePattern("first_last@gmail.com")).toBe("%first\\_last@gmail.com%");
+    expect(likePattern("a\\b")).toBe("%a\\\\b%");
+    expect(likePattern("me+tag")).toBe("%me+tag%");
   });
 });

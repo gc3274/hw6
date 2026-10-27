@@ -119,7 +119,8 @@ export default async function ModelPage({ params, searchParams }: PageProps<"/ll
       )}
       {created && (
         <p role="status" className={`${noticeBox} mt-6`}>
-          Model added. No chain step calls it until a step is pointed at it.
+          Model added. No chain step uses it yet: steps are read-only here and keep their models.
+          To change what a step calls, edit the model it already uses.
         </p>
       )}
       {!callable && <p className={`${errorBox} mt-6`}>{UNCALLABLE_NOTE}</p>}

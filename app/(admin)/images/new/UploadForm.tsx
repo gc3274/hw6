@@ -36,7 +36,9 @@ const START_FAILED = "Couldn’t start the upload. Try again.";
 const UPLOAD_FAILED = "The upload failed. Check your connection and try again.";
 const SAVE_FAILED = "Couldn’t save the photo. Try again.";
 
+// The same object when there's nothing to clear, so typing doesn't re-render for nothing
 const without = (errors: Partial<Record<Field, string>>, field: Field) => {
+  if (!(field in errors)) return errors;
   const next = { ...errors };
   delete next[field];
   return next;
@@ -56,6 +58,8 @@ export default function UploadForm() {
   const [pending, startTransition] = useTransition();
   // Optimistic so each stage shows right away and clears itself when the submit ends
   const [stage, setStage] = useOptimistic<Stage | null>(null);
+  // Bumped by a refused submit only, so clearing an error while typing never moves focus
+  const [refusals, setRefusals] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
 
   // Free the old blob URL whenever the preview changes or the form goes away
@@ -65,9 +69,9 @@ export default function UploadForm() {
   }, [preview]);
 
   useEffect(() => {
-    if (Object.keys(errors).length === 0) return;
+    if (refusals === 0) return;
     formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
-  }, [errors]);
+  }, [refusals]);
 
   function onPick(event: ChangeEvent<HTMLInputElement>) {
     const picked = event.target.files?.[0] ?? null;
@@ -94,7 +98,10 @@ export default function UploadForm() {
     if (!readNote(note).ok) found.context = NOTE_RULE;
     setError(null);
     setErrors(found);
-    if (!file || Object.keys(found).length > 0) return;
+    if (!file || Object.keys(found).length > 0) {
+      setRefusals((n) => n + 1);
+      return;
+    }
 
     const picked = file;
     const chosen = topic;

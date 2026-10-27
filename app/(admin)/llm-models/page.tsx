@@ -71,7 +71,8 @@ export default async function ModelsPage({ searchParams }: PageProps<"/llm-model
         </p>
       )}
 
-      <div className="mt-6">
+      {/* Keyed by the URL, so "Clear filters" also resets the fields */}
+      <div key={hrefWith("/llm-models", query)} className="mt-6">
         <Filters query={query} providers={result?.providers ?? []} />
       </div>
 

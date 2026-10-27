@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef, type RefObject } from "react";
+import { useFormStatus } from "react-dom";
 import SubmitButton from "@/components/SubmitButton";
 import { button } from "@/components/ui";
 
@@ -19,6 +20,9 @@ type ConfirmDeleteProps = {
 
 // A native modal <dialog>: it traps focus, closes on Escape, and returns focus
 // to the button that opened it. Confirming submits the action, which redirects.
+// A failed delete redirects back to the same page with ?error=…, which keeps
+// this component mounted, so the dialog closes itself once the submit settles
+// and the error banner isn't left behind the backdrop.
 export default function ConfirmDelete({ action, fields, noun, warning, blockedReason = null }: ConfirmDeleteProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -80,8 +84,20 @@ export default function ConfirmDelete({ action, fields, noun, warning, blockedRe
           <SubmitButton variant="danger" pendingText="Deleting…">
             Delete {noun}
           </SubmitButton>
+          <CloseWhenSettled dialogRef={dialogRef} />
         </form>
       </dialog>
     </>
   );
+}
+
+// Must sit inside the form: useFormStatus reads the parent form's submit
+function CloseWhenSettled({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | null> }) {
+  const { pending } = useFormStatus();
+  const wasPending = useRef(false);
+  useEffect(() => {
+    if (wasPending.current && !pending) dialogRef.current?.close();
+    wasPending.current = pending;
+  }, [pending, dialogRef]);
+  return null;
 }

@@ -130,16 +130,17 @@ export function preview(text: string | null, max = PREVIEW_MAX): string {
   return line.length > max ? `${line.slice(0, max).join("").trimEnd()}…` : line.join("");
 }
 
-// Which chain a run used. prompt_chain_id is null both when the built-in chain
-// ran (the database had no usable chain, and the notes start "config_fallback")
-// and when the run stopped before a chain was picked. A model answer (succeeded,
-// rejected, busy) means a chain ran, so a null id there is the built-in one.
-export type ChainUse = "chain" | "built-in" | "none";
+// Which chain a run used. prompt_chain_id is null when the built-in chain ran
+// (the database had no usable chain, and the notes say "config_fallback"), when
+// the run stopped before a chain was picked, and when the chain it used was
+// deleted since (on delete set null). A model answer (succeeded, rejected, busy)
+// means a chain ran, so without the note a null id there is a deleted chain.
+export type ChainUse = "chain" | "built-in" | "deleted" | "none";
 
 export function chainUse(run: { status: RequestStatus; chainId: number | null; error: string | null }): ChainUse {
   if (run.chainId !== null) return "chain";
   if (run.error?.includes("config_fallback")) return "built-in";
-  return run.status === "succeeded" || run.status === "rejected" || run.status === "busy" ? "built-in" : "none";
+  return run.status === "succeeded" || run.status === "rejected" || run.status === "busy" ? "deleted" : "none";
 }
 
 // What the photo column shows. Admin runs always record their post, and app runs

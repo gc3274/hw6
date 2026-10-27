@@ -50,7 +50,11 @@ export default async function UsersPage({ searchParams }: PageProps<"/users">) {
       </p>
 
       <div className="mt-6">
-        <FilterBar action="/users" showClear={filtered || query.sort !== "joined"}>
+        <FilterBar
+          key={hrefWith("/users", query)}
+          action="/users"
+          showClear={filtered || query.sort !== "joined"}
+        >
           <label className="flex min-w-48 flex-1 flex-col gap-1">
             <span className={label}>Search</span>
             <input

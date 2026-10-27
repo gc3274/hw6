@@ -130,7 +130,7 @@ export default async function LlmResponsePage({ params }: PageProps<"/llm-respon
               none("No model row: the built-in chain, or a model deleted since")
             )}
           </Field>
-          <Field term="Model that answered">
+          <Field term="Model called or answered">
             <span className="font-mono text-sm break-all">{response.providerModelId}</span>
           </Field>
           <Field term="Fallback">

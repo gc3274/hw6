@@ -4,7 +4,7 @@
 // the match hook_before_user_created makes, both in the prompt chains migration.
 import { codePoints, nouns } from "@/lib/format";
 import { constraintField, type FormState } from "@/lib/forms";
-import { parsePage, searchTerm, type SearchParams } from "@/lib/params";
+import { parsePage, type SearchParams } from "@/lib/params";
 
 export const DOMAIN_MAX = 253;
 export const EMAIL_MAX = 254;
@@ -15,8 +15,24 @@ export const EMAIL_RE = /^[^@\s]+@([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2
 
 export type AccessQuery = { q: string | null; page: number };
 
+const SEARCH_MAX = 60;
+
+// Like searchTerm, but domains and addresses keep + and _ (first_last@gmail.com,
+// me+tag@gmail.com). The result only goes into an ilike pattern, through likePattern.
+export function accessSearch(raw: unknown): string | null {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof v !== "string") return null;
+  const cleaned = v.trim().toLowerCase().replace(/[^\p{L}\p{N}@.+_'-]/gu, "");
+  return Array.from(cleaned).slice(0, SEARCH_MAX).join("") || null;
+}
+
+// "contains" for .ilike(): LIKE's own wildcards and escape character are escaped
+export function likePattern(term: string): string {
+  return `%${term.replace(/[\\%_]/g, "\\$&")}%`;
+}
+
 export function parseAccessQuery(sp: SearchParams): AccessQuery {
-  return { q: searchTerm(sp.q), page: parsePage(sp.page) };
+  return { q: accessSearch(sp.q), page: parsePage(sp.page) };
 }
 
 export type DomainField = "apex_domain";
@@ -169,7 +185,7 @@ export function domainDeleteWarning(domain: string, { coveredBy, entries }: Dele
     return `Sign-ups from ${domain} keep working, because ${coveredBy} is on the list too.${FOREVER}`;
   }
   const last = entries <= 1 ? LAST_ENTRY : "";
-  return `New sign-ups with an email at ${domain} or its subdomains stop at the next sign-in attempt. Existing accounts keep working.${last}${FOREVER}`;
+  return `New sign-ups with an email at ${domain} or its subdomains stop at the next sign-in attempt, unless a subdomain or address is listed separately. Existing accounts keep working.${last}${FOREVER}`;
 }
 
 export function emailDeleteWarning(email: string, { coveredBy, entries }: DeleteContext): string {

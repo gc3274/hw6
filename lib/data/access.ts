@@ -1,6 +1,13 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { allowingDomains, DOMAINS_SHOWN, emailDomain, type AccessQuery, type SignupLists } from "@/lib/access";
+import {
+  allowingDomains,
+  DOMAINS_SHOWN,
+  emailDomain,
+  likePattern,
+  type AccessQuery,
+  type SignupLists,
+} from "@/lib/access";
 import { rangeFor } from "@/lib/params";
 import { adminDb } from "@/lib/supabase/admin";
 
@@ -63,8 +70,7 @@ export async function listDomains(q: AccessQuery): Promise<{ rows: DomainRow[]; 
   let query = db
     .from("allowed_signup_domains")
     .select("id, apex_domain, created_at, updated_at", { count: "exact" });
-  // q went through searchTerm(), so it carries no LIKE wildcards
-  if (q.q) query = query.ilike("apex_domain", `%${q.q}%`);
+  if (q.q) query = query.ilike("apex_domain", likePattern(q.q));
 
   const [from, to] = rangeFor(q.page);
   const { data, error, count } = await query
@@ -81,7 +87,7 @@ export async function listAddresses(q: AccessQuery): Promise<{ rows: AddressRow[
   let query = db
     .from("whitelisted_email_addresses")
     .select("id, email_address, created_at, updated_at", { count: "exact" });
-  if (q.q) query = query.ilike("email_address", `%${q.q}%`);
+  if (q.q) query = query.ilike("email_address", likePattern(q.q));
 
   const [from, to] = rangeFor(q.page);
   const { data, error, count } = await query
