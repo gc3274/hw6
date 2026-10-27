@@ -22,7 +22,7 @@ const COLUMNS = {
     "id, image_id, user_id, humor_flavor_id, critic_id, content, tip, rating, model, is_public, posted_at, upvotes, downvotes, score, created_at",
   images: "id, user_id, image_path, topic, created_at",
   caption_votes: "caption_id, user_id, value, created_at",
-  generation_attempts: "id, user_id, image_path, created_at",
+  generation_requests: "id, user_id, image_path, created_at",
   profiles: "id, created_at",
 } as const;
 
@@ -45,12 +45,17 @@ export async function loadStatsDataset(): Promise<StatsDataset> {
       "caption_id",
       "user_id",
     ]),
-    selectAll<AttemptRow>(() => db.from("generation_attempts").select(COLUMNS.generation_attempts), ["id"]),
+    // Runs from the main app only (legacy rows included): admin runs reuse a post's
+    // path, so they would count as saved, and they don't spend anyone's daily posts
+    selectAll<AttemptRow>(
+      () => db.from("generation_requests").select(COLUMNS.generation_requests).eq("source", "app"),
+      ["id"],
+    ),
     selectAll<ProfileRow>(() => db.from("profiles").select(COLUMNS.profiles), ["id"]),
   ]);
 
   const withNote = new Set(notes.rows.map((r) => r.id));
-  const reads = { critics, captions, images, caption_votes: votes, generation_attempts: attempts, profiles };
+  const reads = { critics, captions, images, caption_votes: votes, generation_requests: attempts, profiles };
 
   return {
     critics: critics.rows,
