@@ -6,6 +6,7 @@ import { input, label } from "@/components/ui";
 import { CAPTION_MAX } from "@/lib/captions";
 import { codePoints } from "@/lib/format";
 import { PUBLISH_REFUSED, type EditField, type EditState } from "@/lib/media";
+import { restoreChoices } from "@/lib/restore-choices";
 import { RATING_MAX, TIP_MAX } from "@/lib/roasts";
 import { updateRoast } from "../actions";
 
@@ -50,6 +51,11 @@ export default function RoastEditForm({
     if (!state.errors) return;
     formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   }, [state]);
+
+  // React resets the form after each submit; put the choices back from state
+  useEffect(() => {
+    restoreChoices(formRef.current, values);
+  }, [state, values]);
 
   function update(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = event.target;

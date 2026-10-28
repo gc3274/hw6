@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Badge from "@/components/Badge";
 import SubmitButton from "@/components/SubmitButton";
 import { errorBox, label } from "@/components/ui";
 import type { CreateState } from "@/lib/media";
+import { restoreChoices } from "@/lib/restore-choices";
 import { createRoast } from "../actions";
 
 export type CriticChoice = {
@@ -30,9 +31,15 @@ export default function CreateRoastForm({ imageId, choices, preselect }: CreateR
   const [state, formAction, pending] = useActionState(createRoast, initialState);
   // Controlled so a failed try keeps the admin's pick instead of resetting the form
   const [criticId, setCriticId] = useState(preselect === null ? "" : String(preselect));
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // React resets the form after each submit, which unticks the radio; put it back
+  useEffect(() => {
+    restoreChoices(formRef.current, { criticId });
+  }, [state, criticId]);
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form ref={formRef} action={formAction} className="space-y-5">
       <input type="hidden" name="imageId" value={imageId} />
 
       <fieldset disabled={pending} aria-describedby={state.error ? "create-error" : undefined}>

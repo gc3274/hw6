@@ -17,6 +17,7 @@ import {
   UNCALLABLE_NOTE,
   type ModelField,
 } from "@/lib/llm";
+import { restoreChoices } from "@/lib/restore-choices";
 import { createModel, updateModel } from "./actions";
 
 type ProviderChoice = { id: number; name: string; slug: string };
@@ -63,6 +64,11 @@ export default function ModelForm({ providers, model, providerId = null }: Model
     if (!state.errors) return;
     formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   }, [state]);
+
+  // React resets the form after each submit; put the choices back from state
+  useEffect(() => {
+    restoreChoices(formRef.current, values);
+  }, [state, values]);
 
   function update(event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = event.target;

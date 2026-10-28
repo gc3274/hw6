@@ -15,6 +15,7 @@ import {
 } from "@/lib/examples";
 import { codePoints } from "@/lib/format";
 import { FORM_INITIAL } from "@/lib/forms";
+import { restoreChoices } from "@/lib/restore-choices";
 import { RATING_MAX, TOPICS } from "@/lib/roasts";
 import { PRIORITY_MAX } from "@/lib/terms";
 
@@ -41,6 +42,11 @@ export default function ExampleForm({ action, id, initial, submitLabel, pendingT
     if (!state.errors) return;
     formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   }, [state]);
+
+  // React resets the form after each submit; put the choices back from state
+  useEffect(() => {
+    restoreChoices(formRef.current, values);
+  }, [state, values]);
 
   function update(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = event.target;

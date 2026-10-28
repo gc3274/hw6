@@ -9,6 +9,7 @@ import { CONTEXT_MAX } from "@/lib/captions";
 import { codePoints } from "@/lib/format";
 import { FORM_INITIAL, type FormState } from "@/lib/forms";
 import { TOPIC_LOCKED, type ImageField, type TopicLock } from "@/lib/images";
+import { restoreChoices } from "@/lib/restore-choices";
 import { topicInfo, TOPICS } from "@/lib/roasts";
 import { updateImage } from "../actions";
 
@@ -34,6 +35,11 @@ export default function ImageEditForm({ id, note, topic, lock }: ImageEditFormPr
     if (!state.errors) return;
     formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   }, [state]);
+
+  // React resets the form after each submit; put the choices back from state
+  useEffect(() => {
+    restoreChoices(formRef.current, values);
+  }, [state, values]);
 
   function update(event: ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = event.target;

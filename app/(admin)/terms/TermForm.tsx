@@ -7,6 +7,7 @@ import { input } from "@/components/ui";
 import { TERMS_MAX } from "@/lib/chains";
 import { codePoints } from "@/lib/format";
 import { FORM_INITIAL } from "@/lib/forms";
+import { restoreChoices } from "@/lib/restore-choices";
 import { TOPICS } from "@/lib/roasts";
 import {
   DEFINITION_MAX,
@@ -40,6 +41,11 @@ export default function TermForm({ action, id, initial, submitLabel, pendingText
     if (!state.errors) return;
     formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   }, [state]);
+
+  // React resets the form after each submit; put the choices back from state
+  useEffect(() => {
+    restoreChoices(formRef.current, values);
+  }, [state, values]);
 
   function update(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = event.target;
