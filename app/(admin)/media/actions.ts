@@ -29,7 +29,7 @@ import { adminDb } from "@/lib/supabase/admin";
 
 const GONE: EditState = { ok: false, message: "This roast no longer exists. Go back to the list." };
 const DB_DOWN: EditState = { ok: false, message: "Couldn’t save: the database didn’t answer. Try again." };
-const FIX_FIELDS = "Fix the fields marked below.";
+const FIX_FIELDS = "Fix the fields marked above.";
 
 type Created = { ok: true; id: string } | { ok: false; error: string };
 // What the request log records about the run. status and detail are set on failure.

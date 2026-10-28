@@ -14,7 +14,7 @@ export type FormState<F extends string = string> = {
 
 export const FORM_INITIAL: FormState = { ok: false, message: "" };
 
-export const FIX_FIELDS = "Fix the fields marked below.";
+export const FIX_FIELDS = "Fix the fields marked above.";
 export const DB_DOWN = "Couldn’t save: the database didn’t answer. Try again.";
 
 const collapse = (s: string) => s.replace(/\s+/g, " ").trim();

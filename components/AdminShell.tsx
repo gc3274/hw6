@@ -13,8 +13,9 @@ type AdminShellProps = {
 };
 
 // Top bar plus the page frame: the wordmark and account on the first row, then
-// the sections in labelled groups that sit side by side on wide screens and
-// stack on phones.
+// the sections in labelled groups. Each group is boxed with its bold label, so a
+// group's tabs never read as part of the next; the boxes sit side by side on
+// wide screens and stack on phones.
 export default function AdminShell({ email, children }: AdminShellProps) {
   return (
     <>
@@ -44,13 +45,16 @@ export default function AdminShell({ email, children }: AdminShellProps) {
             </div>
           </div>
           <nav aria-label="Admin" className="mt-3">
-            <div className="flex flex-col gap-y-2 lg:flex-row lg:flex-wrap lg:gap-x-6">
+            <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap">
               {ADMIN_NAV_GROUPS.map((group) => (
-                <div key={group.label} className="flex items-start gap-x-1 lg:items-center">
+                <div
+                  key={group.label}
+                  className="flex items-start gap-x-1 rounded-xl border border-line px-1.5 py-1 lg:items-center"
+                >
                   {/* Not a heading: it would come before each page's h1 */}
                   <p
                     id={`nav-${group.label.toLowerCase()}`}
-                    className="w-20 shrink-0 pt-2 text-xs font-semibold tracking-wide text-muted uppercase lg:w-auto lg:pt-0 lg:pr-1"
+                    className="w-20 shrink-0 pt-2 pl-1.5 text-xs font-bold tracking-wide text-ink uppercase lg:w-auto lg:pt-0 lg:pr-1"
                   >
                     {group.label}
                   </p>
