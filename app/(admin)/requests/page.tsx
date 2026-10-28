@@ -208,7 +208,8 @@ function Row({ row, now }: { row: RequestRow; now: number }) {
       <td className="py-3 pr-4">
         <Badge tone={status.tone}>{status.label}</Badge>
       </td>
-      <td className="py-3 pr-4 text-right tabular-nums">{row.roastCount}</td>
+      {/* The old attempts log never recorded how many roasts a run saved */}
+      <td className="py-3 pr-4 text-right tabular-nums">{row.status === "legacy" ? none : row.roastCount}</td>
       <td className="py-3 pr-4 text-right whitespace-nowrap tabular-nums">{formatDuration(row.durationMs)}</td>
       <td className="py-3 pr-4">
         {photo === "post" ? (

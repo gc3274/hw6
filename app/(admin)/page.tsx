@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import type { ReactNode } from "react";
 import BarList from "@/components/charts/BarList";
@@ -11,7 +12,7 @@ import RangeStrip from "@/components/charts/RangeStrip";
 import StackedBar from "@/components/charts/StackedBar";
 import RatingPill from "@/components/RatingPill";
 import StatTile from "@/components/StatTile";
-import { card, errorBox } from "@/components/ui";
+import { card, errorBox, textLink } from "@/components/ui";
 import { loadStatsDataset, type StatsDataset } from "@/lib/data/stats";
 import { requireSuperadmin } from "@/lib/dal";
 import { dayLabel, durationLabel, fmt1, nouns, nyDayKey, shareLabel } from "@/lib/format";
@@ -798,8 +799,11 @@ function PipelineChart({ data, notes }: { data: StatsDataset; notes: number }) {
       }
       footer={
         <p className="text-muted">
-          An attempt with no saved photo was refused by the critics, blocked by safety, or failed; the
-          log doesn’t say which.
+          An attempt with no saved photo was refused by the critics, blocked by safety, or failed. The{" "}
+          <Link href="/requests" className={textLink}>
+            request log
+          </Link>{" "}
+          says which for every run since logging began; legacy runs from before it don’t say.
         </p>
       }
       table={{
@@ -889,7 +893,7 @@ function Method({ truncated }: { truncated: string[] }) {
     ["Time", "Weeks start on Monday and days end at midnight, New York time."],
     [
       "Attempts",
-      "Every tap on Roast me is logged before the critics are called. One with no saved photo was refused, blocked by safety, or failed.",
+      "Every tap on Roast me is logged before the critics are called. One with no saved photo was refused, blocked by safety, or failed; the request log shows which, except for legacy runs.",
     ],
   ];
   if (truncated.length > 0) {

@@ -128,7 +128,9 @@ export default async function RequestPage({ params }: PageProps<"/requests/[id]"
             {request.finishedAt ? <When iso={request.finishedAt} /> : <span className="text-muted">Not recorded</span>}
           </Field>
           <Field term="Took">{formatDuration(request.durationMs)}</Field>
-          <Field term="Roasts saved">{request.roastCount}</Field>
+          <Field term="Roasts saved">
+            {request.status === "legacy" ? <span className="text-muted">Not recorded</span> : request.roastCount}
+          </Field>
           <Field term="Photo">
             <Photo request={request} />
           </Field>
