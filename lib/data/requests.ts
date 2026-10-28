@@ -2,7 +2,7 @@ import "server-only";
 import { IMAGE_BUCKET } from "@/lib/captions";
 import type { FallbackReason, ResponseStatus } from "@/lib/chains";
 import { ownerNames } from "@/lib/data/media";
-import { rangeFor } from "@/lib/params";
+import { emptyPastEnd, rangeFor } from "@/lib/params";
 import { preview, type RequestQuery, type RequestSource, type RequestStatus, type ResponseQuery } from "@/lib/requests";
 import { adminDb } from "@/lib/supabase/admin";
 
@@ -77,11 +77,13 @@ export async function listRequests(q: RequestQuery): Promise<{ rows: RequestRow[
 
   const [from, to] = rangeFor(q.page);
   // id last, so pages never overlap when two runs share a timestamp
-  const { data, error, count } = await query
-    .order("created_at", { ascending: false })
-    .order("id")
-    .range(from, to)
-    .overrideTypes<RequestListRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+      .overrideTypes<RequestListRow[], { merge: false }>(),
+  );
   if (error) throw fail("Generation requests", error);
   const readAt = Date.now();
 
@@ -227,11 +229,13 @@ export async function listResponses(q: ResponseQuery): Promise<{ rows: ResponseR
   if (q.fallback !== null) query = query.eq("is_fallback", q.fallback === "yes");
 
   const [from, to] = rangeFor(q.page);
-  const { data, error, count } = await query
-    .order("created_at", { ascending: false })
-    .order("id")
-    .range(from, to)
-    .overrideTypes<ResponseListRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+      .overrideTypes<ResponseListRow[], { merge: false }>(),
+  );
   if (error) throw fail("LLM responses", error);
 
   return {

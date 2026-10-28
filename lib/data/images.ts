@@ -2,7 +2,7 @@ import "server-only";
 import { IMAGE_BUCKET } from "@/lib/captions";
 import { ownerNames } from "@/lib/data/media";
 import type { ImageQuery } from "@/lib/images";
-import { rangeFor } from "@/lib/params";
+import { emptyPastEnd, rangeFor } from "@/lib/params";
 import { adminDb } from "@/lib/supabase/admin";
 
 // Reads for the photos pages. Writes live in app/(admin)/images/actions.ts.
@@ -45,11 +45,13 @@ export async function listImages(q: ImageQuery): Promise<{ rows: ImageRow[]; tot
 
   const [from, to] = rangeFor(q.page);
   // id last, so pages never overlap when two rows share a timestamp
-  const { data, error, count } = await query
-    .order("created_at", { ascending: false })
-    .order("id")
-    .range(from, to)
-    .overrideTypes<ListRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+      .overrideTypes<ListRow[], { merge: false }>(),
+  );
   if (error) throw fail("Photos list", error);
 
   const rows = data ?? [];

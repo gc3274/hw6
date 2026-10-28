@@ -1,7 +1,7 @@
 import "server-only";
 import { IMAGE_BUCKET } from "@/lib/captions";
 import { selectAll } from "@/lib/data/select-all";
-import { ilikeAny, rangeFor, type UserQuery } from "@/lib/params";
+import { emptyPastEnd, ilikeAny, rangeFor, type UserQuery } from "@/lib/params";
 import { adminDb } from "@/lib/supabase/admin";
 import {
   userActivity,
@@ -58,9 +58,11 @@ export async function listUsers(q: UserQuery): Promise<{ rows: UserRow[]; total:
       : query.order("created_at", { ascending: false }).order("id");
 
   const [from, to] = rangeFor(q.page);
-  const { data, error, count } = await query
-    .range(from, to)
-    .overrideTypes<ProfileListRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .range(from, to)
+      .overrideTypes<ProfileListRow[], { merge: false }>(),
+  );
   if (error) throw fail("Users list", error);
 
   const profiles = data ?? [];

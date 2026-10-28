@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ModelQuery, ProviderQuery } from "@/lib/llm";
-import { rangeFor } from "@/lib/params";
+import { emptyPastEnd, rangeFor } from "@/lib/params";
 import { adminDb } from "@/lib/supabase/admin";
 
 // Reads for the LLM providers and models pages. Writes live in
@@ -39,13 +39,15 @@ export async function listProviders(q: ProviderQuery): Promise<{ rows: ProviderR
   const db = await adminDb();
   const [from, to] = rangeFor(q.page);
   // id last, so pages never overlap when two names tie
-  const { data, error, count } = await db
-    .from("llm_providers")
-    .select("id, name, slug, updated_at, llm_models(id)", { count: "exact" })
-    .order("name")
-    .order("id")
-    .range(from, to)
-    .overrideTypes<ProviderListRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await db
+      .from("llm_providers")
+      .select("id, name, slug, updated_at, llm_models(id)", { count: "exact" })
+      .order("name")
+      .order("id")
+      .range(from, to)
+      .overrideTypes<ProviderListRow[], { merge: false }>(),
+  );
   if (error) throw fail("Providers list", error);
 
   return {
@@ -139,11 +141,13 @@ export async function listModels(
   if (q.provider !== null) query = query.eq("llm_provider_id", q.provider);
 
   const [from, to] = rangeFor(q.page);
-  const { data, error, count } = await query
-    .order("name")
-    .order("id")
-    .range(from, to)
-    .overrideTypes<ModelListRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .order("name")
+      .order("id")
+      .range(from, to)
+      .overrideTypes<ModelListRow[], { merge: false }>(),
+  );
   if (error) throw fail("Models list", error);
 
   return {

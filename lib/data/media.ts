@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { IMAGE_BUCKET } from "@/lib/captions";
-import { rangeFor, type MediaQuery } from "@/lib/params";
+import { emptyPastEnd, rangeFor, type MediaQuery } from "@/lib/params";
 import { parseTopic, type Topic } from "@/lib/roasts";
 import { adminDb } from "@/lib/supabase/admin";
 import { fullName } from "@/lib/users";
@@ -105,11 +105,13 @@ export async function listMedia(q: MediaQuery): Promise<{ rows: MediaRow[]; tota
 
   const [from, to] = rangeFor(q.page);
   // id last, so pages never overlap when two rows share a timestamp
-  const { data, error, count } = await query
-    .order("created_at", { ascending: false })
-    .order("id")
-    .range(from, to)
-    .overrideTypes<ListRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+      .overrideTypes<ListRow[], { merge: false }>(),
+  );
   if (error) throw fail("Roasts list", error);
 
   const rows = data ?? [];
@@ -301,14 +303,16 @@ export type RoastPost = {
 export async function listRoastPosts(page: number): Promise<{ rows: RoastPost[]; total: number }> {
   const db = await adminDb();
   const [from, to] = rangeFor(page);
-  const { data, error, count } = await db
-    .from("images")
-    .select("id, user_id, image_path, topic, created_at, captions(critic_id, is_public)", { count: "exact" })
-    .not("topic", "is", null)
-    .order("created_at", { ascending: false })
-    .order("id")
-    .range(from, to)
-    .overrideTypes<PostRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await db
+      .from("images")
+      .select("id, user_id, image_path, topic, created_at, captions(critic_id, is_public)", { count: "exact" })
+      .not("topic", "is", null)
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+      .overrideTypes<PostRow[], { merge: false }>(),
+  );
   if (error) throw fail("Roast posts", error);
 
   const rows = data ?? [];

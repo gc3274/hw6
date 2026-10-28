@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  PAGE_SIZE,
+  emptyPastEnd,
   hrefWith,
   ilikeAny,
+  PAGE_SIZE,
   parseMediaQuery,
   parsePage,
   parseUserQuery,
@@ -235,5 +236,36 @@ describe("hrefWith", () => {
 
   it("encodes search text", () => {
     expect(hrefWith("/users", parseUserQuery({}), { q: "ann lee" })).toBe("/users?q=ann+lee");
+  });
+});
+
+describe("emptyPastEnd", () => {
+  const pastEnd = {
+    data: null,
+    error: {
+      code: "PGRST103",
+      details: "An offset of 1000 was requested, but there are only 11 rows.",
+      message: "Requested range not satisfiable",
+    },
+    count: null,
+  };
+
+  it("turns a page past the last row into an empty page with the real total", () => {
+    expect(emptyPastEnd(pastEnd)).toMatchObject({ data: [], error: null, count: 11 });
+  });
+
+  it.each([
+    ["An offset of 50 was requested, but there are only 1 rows.", 1],
+    ["An offset of 50 was requested, but there are only 0 rows.", 0],
+    [null, null],
+  ])("reads the total from %j", (details, count) => {
+    expect(emptyPastEnd({ ...pastEnd, error: { ...pastEnd.error, details } }).count).toBe(count);
+  });
+
+  it("leaves other errors and good pages alone", () => {
+    const other = { data: null, error: { code: "57014", details: null }, count: null };
+    expect(emptyPastEnd(other)).toBe(other);
+    const ok = { data: [1, 2], error: null, count: 2 };
+    expect(emptyPastEnd(ok)).toBe(ok);
   });
 });

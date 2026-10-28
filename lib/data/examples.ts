@@ -1,6 +1,6 @@
 import "server-only";
 import type { ExampleQuery } from "@/lib/examples";
-import { rangeFor } from "@/lib/params";
+import { emptyPastEnd, rangeFor } from "@/lib/params";
 import { adminDb } from "@/lib/supabase/admin";
 
 // Reads for the example review pages. Writes live in app/(admin)/examples/actions.ts.
@@ -59,11 +59,13 @@ export async function listExamples(q: ExampleQuery): Promise<{ rows: ExampleRow[
 
   const [from, to] = rangeFor(q.page);
   // The prompt's order: priority, then id
-  const { data, error, count } = await query
-    .order("priority", { ascending: false })
-    .order("id")
-    .range(from, to)
-    .overrideTypes<ListRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .order("priority", { ascending: false })
+      .order("id")
+      .range(from, to)
+      .overrideTypes<ListRow[], { merge: false }>(),
+  );
   if (error) throw fail("Example reviews list", error);
 
   return {

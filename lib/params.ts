@@ -43,6 +43,22 @@ export function rangeFor(page: number): [number, number] {
   return [(p - 1) * PAGE_SIZE, p * PAGE_SIZE - 1];
 }
 
+type PageResult = {
+  data: unknown[] | null;
+  error: { code?: string; details?: string | null } | null;
+  count: number | null;
+};
+
+// PostgREST answers a page past the last row with an error (416, PGRST103) instead
+// of an empty page. Its details say how many rows there are ("An offset of 1000 was
+// requested, but there are only 11 rows."), so this turns it back into an empty page
+// with that total, and the list shows "past the end" instead of "couldn't load".
+export function emptyPastEnd<R extends PageResult>(result: R): R {
+  if (result.error?.code !== "PGRST103") return result;
+  const total = /only (\d+) rows?/.exec(result.error.details ?? "")?.[1];
+  return { ...result, data: [], error: null, count: total === undefined ? null : Number(total) };
+}
+
 export type MediaQuery = {
   kind: "roast" | "legacy" | "all";
   critic: string | null;

@@ -1,5 +1,5 @@
 import "server-only";
-import { ilikeAny, rangeFor } from "@/lib/params";
+import { emptyPastEnd, ilikeAny, rangeFor } from "@/lib/params";
 import { adminDb } from "@/lib/supabase/admin";
 import type { TermQuery } from "@/lib/terms";
 
@@ -42,12 +42,14 @@ export async function listTerms(q: TermQuery): Promise<{ rows: TermRow[]; total:
 
   const [from, to] = rangeFor(q.page);
   // The prompt's order (priority, then term), with id last so pages never overlap
-  const { data, error, count } = await query
-    .order("priority", { ascending: false })
-    .order("term")
-    .order("id")
-    .range(from, to)
-    .overrideTypes<ListRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .order("priority", { ascending: false })
+      .order("term")
+      .order("id")
+      .range(from, to)
+      .overrideTypes<ListRow[], { merge: false }>(),
+  );
   if (error) throw fail("Terms list", error);
 
   return {

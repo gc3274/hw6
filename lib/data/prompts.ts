@@ -1,6 +1,6 @@
 import "server-only";
 import { toChain, validateChain, type InputType, type OutputType } from "@/lib/chains";
-import { rangeFor } from "@/lib/params";
+import { emptyPastEnd, rangeFor } from "@/lib/params";
 import { adminDb } from "@/lib/supabase/admin";
 
 // Reads for the prompt chain pages and the chain mix. Chains and steps are
@@ -39,14 +39,16 @@ export type ChainSummary = {
 export async function listChains(page: number): Promise<{ rows: ChainSummary[]; total: number }> {
   const db = await adminDb();
   const [from, to] = rangeFor(page);
-  const { data, error, count } = await db
-    .from("prompt_chains")
-    .select("id, slug, name, description, prompt_chain_steps(id), prompt_chain_mix(weight, updated_at)", {
-      count: "exact",
-    })
-    .order("id")
-    .range(from, to)
-    .overrideTypes<ChainListRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await db
+      .from("prompt_chains")
+      .select("id, slug, name, description, prompt_chain_steps(id), prompt_chain_mix(weight, updated_at)", {
+        count: "exact",
+      })
+      .order("id")
+      .range(from, to)
+      .overrideTypes<ChainListRow[], { merge: false }>(),
+  );
   if (error) throw fail("Prompt chains", error);
 
   return {

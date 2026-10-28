@@ -8,7 +8,7 @@ import {
   type AccessQuery,
   type SignupLists,
 } from "@/lib/access";
-import { rangeFor } from "@/lib/params";
+import { emptyPastEnd, rangeFor } from "@/lib/params";
 import { adminDb } from "@/lib/supabase/admin";
 
 // Reads for the sign-up domain and email whitelist pages. Writes live in their
@@ -73,11 +73,13 @@ export async function listDomains(q: AccessQuery): Promise<{ rows: DomainRow[]; 
   if (q.q) query = query.ilike("apex_domain", likePattern(q.q));
 
   const [from, to] = rangeFor(q.page);
-  const { data, error, count } = await query
-    .order("apex_domain")
-    .order("id")
-    .range(from, to)
-    .overrideTypes<DomainDbRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .order("apex_domain")
+      .order("id")
+      .range(from, to)
+      .overrideTypes<DomainDbRow[], { merge: false }>(),
+  );
   if (error) throw fail("Allowed domains list", error);
   return { rows: (data ?? []).map(toDomain), total: count ?? 0 };
 }
@@ -90,11 +92,13 @@ export async function listAddresses(q: AccessQuery): Promise<{ rows: AddressRow[
   if (q.q) query = query.ilike("email_address", likePattern(q.q));
 
   const [from, to] = rangeFor(q.page);
-  const { data, error, count } = await query
-    .order("email_address")
-    .order("id")
-    .range(from, to)
-    .overrideTypes<AddressDbRow[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .order("email_address")
+      .order("id")
+      .range(from, to)
+      .overrideTypes<AddressDbRow[], { merge: false }>(),
+  );
   if (error) throw fail("Whitelisted addresses list", error);
   return { rows: (data ?? []).map(toAddress), total: count ?? 0 };
 }

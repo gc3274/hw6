@@ -1,7 +1,7 @@
 import "server-only";
 import { IMAGE_BUCKET } from "@/lib/captions";
 import { listCritics, ownerNames, type CriticOption } from "@/lib/data/media";
-import { rangeFor, type VoteQuery } from "@/lib/params";
+import { emptyPastEnd, rangeFor, type VoteQuery } from "@/lib/params";
 import { adminDb } from "@/lib/supabase/admin";
 import { ledgerRows, type LedgerSource, type LedgerVote } from "@/lib/votes";
 
@@ -36,12 +36,14 @@ export async function listVotes(q: VoteQuery): Promise<{ rows: LedgerVote[]; tot
 
   const [from, to] = rangeFor(q.page);
   // The primary key last, so pages never overlap when two votes share a timestamp
-  const { data, error, count } = await query
-    .order("created_at", { ascending: false })
-    .order("caption_id")
-    .order("user_id")
-    .range(from, to)
-    .overrideTypes<LedgerSource[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .order("created_at", { ascending: false })
+      .order("caption_id")
+      .order("user_id")
+      .range(from, to)
+      .overrideTypes<LedgerSource[], { merge: false }>(),
+  );
   if (error) throw fail("Votes list", error);
 
   const rows = data ?? [];
@@ -96,12 +98,14 @@ export async function listRatings(q: VoteQuery): Promise<{ rows: RatingRow[]; to
 
   const [from, to] = rangeFor(q.page);
   // id last, so pages never overlap when two roasts share a score and timestamp
-  const { data, error, count } = await query
-    .order("rating", { ascending: false })
-    .order("created_at", { ascending: false })
-    .order("id")
-    .range(from, to)
-    .overrideTypes<RatingSource[], { merge: false }>();
+  const { data, error, count } = emptyPastEnd(
+    await query
+      .order("rating", { ascending: false })
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+      .overrideTypes<RatingSource[], { merge: false }>(),
+  );
   if (error) throw fail("Ratings list", error);
 
   const bucket = db.storage.from(IMAGE_BUCKET);
